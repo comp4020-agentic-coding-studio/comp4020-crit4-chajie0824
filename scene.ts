@@ -46,12 +46,17 @@ export function layoutMain(stage: Stage, count: number): BellVisual[] {
   const usable = Math.max(1, stage.width - marginX * 2);
   const bigR = Math.min(stage.height * 0.052, usable / count / 2.1);
   const smallR = bigR * 0.55;
+  // Bells hang from the beam down toward the bottom of the stage, so their
+  // length has to scale with the actual vertical space available, not a
+  // fixed fraction of stage height — otherwise a tall stage leaves the rack
+  // stranded near the top with empty space below it.
+  const baseHang = Math.max(40, (stage.height - stage.mainBeamY) * 0.7);
   const out: BellVisual[] = [];
   for (let i = 0; i < count; i++) {
     const t = count === 1 ? 0 : i / (count - 1);
     const cx = marginX + usable * t;
     const r = bigR + (smallR - bigR) * t;
-    const hang = stage.height * 0.1 + Math.sin(i * 0.85) * 16 + i * 1.4;
+    const hang = baseHang * (1 - t * 0.22) + Math.sin(i * 0.85) * baseHang * 0.03;
     out.push({ cx, cy: stage.mainBeamY, r, hang, kind: "yong", phase: i * 0.7, speckles: makeSpeckles(r) });
   }
   return out;
@@ -61,11 +66,12 @@ export function layoutShimmer(stage: Stage, count: number): BellVisual[] {
   const marginX = stage.width * 0.16;
   const usable = Math.max(1, stage.width - marginX * 2);
   const r = Math.max(6, stage.height * 0.02);
+  const baseHang = Math.max(16, (stage.mainBeamY - stage.shimmerBeamY) * 0.45);
   const out: BellVisual[] = [];
   for (let i = 0; i < count; i++) {
     const t = count === 1 ? 0.5 : i / (count - 1);
     const cx = marginX + usable * t;
-    const hang = stage.height * 0.05 + Math.sin(i * 1.3) * 6;
+    const hang = baseHang + Math.sin(i * 1.3) * baseHang * 0.15;
     out.push({ cx, cy: stage.shimmerBeamY, r, hang, kind: "niu", phase: i * 1.1, speckles: makeSpeckles(r) });
   }
   return out;
