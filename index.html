@@ -1,36 +1,49 @@
 <!doctype html>
-<html lang="en-AU">
+<html lang="zh">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>COMP4020 prototype</title>
+    <title>编钟绕梁</title>
     <meta
       name="description"
-      content="Replace this with one sentence saying what this page is. A search result and a link preview both show it."
+      content="一件可以自由弹奏的编钟乐器：拖动可连奏滑音，力度和敲击位置决定音色，还能开启提示跟着敲完《山止川行》的前奏。"
     />
 
-    <!--
-      The link-preview card: public/card.png, 1200x630 --- replace it. The URL
-      resolves against this page, like any link. No og:title/og:description:
-      scrapers fall back to the <title> and description above.
-    -->
     <meta property="og:type" content="website" />
     <meta property="og:image" content="./card.png" />
     <meta name="twitter:card" content="summary_large_image" />
 
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header>
+    <header class="site-header">
       <nav aria-label="Primary">
         <a href="./">Home</a>
       </nav>
+      <h1>编钟绕梁</h1>
+      <p class="subtitle">拖动、按力敲击，或用键盘弹一段编钟</p>
     </header>
     <main>
-      <h1>COMP4020 prototype</h1>
-      <p data-testid="intro">
-        Replace this with your prototype. This week's brief is on the course website;
-        <code>spec/README.md</code> explains how the checks in this repo relate to it.
+      <div class="stage" id="stage">
+        <canvas id="bells" role="img" aria-label="一组悬挂的青铜编钟，可用鼠标、触摸或键盘敲击演奏">
+          你的浏览器不支持 Canvas，无法显示这件编钟乐器。
+        </canvas>
+        <div class="readout" id="readout" aria-live="polite"></div>
+        <div class="hint-panel">
+          <button type="button" id="hintToggle" aria-pressed="false">🎵 提示：山止川行</button>
+          <div class="hint-strip" id="hintStrip" hidden></div>
+        </div>
+      </div>
+      <p class="footer-note">
+        拖过几口钟能连奏出滑音；敲在钟的正中是「正鼓音」，偏向钟边是「侧鼓音」，两者相差一个小三度——真正的编钟就是这样一钟两音的。
+        键盘 <code>A S D F G H J K L ; '</code> 也能弹下方两排钟。上方一排小钟是钮钟，不需要也无法直接敲，它们会在你弹奏时自动跟着高八度轻轻和鸣。
+        点开右下角的提示，可以跟着敲完《山止川行》前奏的旋律走向。
       </p>
     </main>
     <script type="module" src="./main.ts"></script>
