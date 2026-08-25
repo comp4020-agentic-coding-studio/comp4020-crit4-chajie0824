@@ -166,8 +166,19 @@ function blendFor(index: number, x: number): number {
   return Math.min(1, Math.max(0, d));
 }
 
+// Traditional Chinese scale-degree names (gongche/五声 theory), not a direct
+// translation of do-re-mi-fa-sol-la-ti — kept in pinyin since that's the
+// name they actually have, rather than forcing an inexact English word.
 function noteName(deg: number): string {
-  const names: Record<number, string> = { 1: "宫", 2: "商", 3: "角", 4: "清角", 5: "徵", 6: "羽", 7: "变宫" };
+  const names: Record<number, string> = {
+    1: "Gong",
+    2: "Shang",
+    3: "Jue",
+    4: "Qingjiao",
+    5: "Zhi",
+    6: "Yu",
+    7: "Biangong",
+  };
   return names[deg] ?? String(deg);
 }
 
@@ -204,8 +215,8 @@ function updateHintUI(): void {
   }
 
   const target = noteSteps[notePosition];
-  const octMark = target.octShift > 0 ? "（高音）" : target.octShift < 0 ? "（低音）" : "";
-  hintNext.textContent = `下一步：${noteName(target.deg)}${octMark} · 按 ${keyLabelForStep(target)} 键 · ${notePosition + 1}/${noteSteps.length}`;
+  const octMark = target.octShift > 0 ? " (high)" : target.octShift < 0 ? " (low)" : "";
+  hintNext.textContent = `Next: ${noteName(target.deg)}${octMark} · press ${keyLabelForStep(target)} · ${notePosition + 1}/${noteSteps.length}`;
 }
 
 function currentHintBellIndex(): number {
@@ -236,7 +247,7 @@ function stopPlayback(): void {
     playTimer = null;
   }
   playToggle.disabled = false;
-  playToggle.textContent = `▶ 播放《${currentSong.name}》`;
+  playToggle.textContent = `▶ Play "${currentSong.name}"`;
   playToggle.setAttribute("aria-pressed", "false");
   if (!hintOn) notePosition = 0;
   updateHintUI();
@@ -260,7 +271,7 @@ function stepPlayback(stepIndex: number): void {
 async function startPlayback(): Promise<void> {
   isPlaying = true;
   playToggle.disabled = true;
-  playToggle.textContent = "加载中…";
+  playToggle.textContent = "Loading…";
   // Auto-play fires its first notes within milliseconds, easily racing the
   // sample fetch/decode — wait for it, or an early note plays as a jarring
   // synth fallback instead of the real recording (audible as a wrong-timbre
@@ -268,7 +279,7 @@ async function startPlayback(): Promise<void> {
   await samplesReady();
   if (!isPlaying) return; // stopped while loading
   playToggle.disabled = false;
-  playToggle.textContent = "⏸ 停止播放";
+  playToggle.textContent = "⏸ Stop";
   playToggle.setAttribute("aria-pressed", "true");
   notePosition = 0;
   updateHintUI();
@@ -287,13 +298,13 @@ function selectSong(id: string): void {
   currentSong = song;
   noteSteps = currentSong.steps.filter(isNoteStep);
   notePosition = 0;
-  playToggle.textContent = `▶ 播放《${currentSong.name}》`;
+  playToggle.textContent = `▶ Play "${currentSong.name}"`;
   updateHintUI();
 }
 
 songSelect.addEventListener("change", () => selectSong(songSelect.value));
 
-playToggle.textContent = `▶ 播放《${currentSong.name}》`;
+playToggle.textContent = `▶ Play "${currentSong.name}"`;
 updateHintUI();
 
 function strikeMain(index: number, velocity: number, blend: number): void {
@@ -306,9 +317,9 @@ function strikeMain(index: number, velocity: number, blend: number): void {
   list.push({ t: performance.now() });
   mainActive.set(index, list);
 
-  const suffix = blend > 0.15 ? "（侧鼓）" : "（正鼓）";
-  const octMark = bell.oct > 0 ? "（高音）" : bell.oct < 0 ? "（低音）" : "";
-  readout.textContent = `${noteName(bell.deg)}${octMark} ${suffix} · 力度 ${Math.round(velocity * 100)}%`;
+  const suffix = blend > 0.15 ? "(edge)" : "(center)";
+  const octMark = bell.oct > 0 ? " (high)" : bell.oct < 0 ? " (low)" : "";
+  readout.textContent = `${noteName(bell.deg)}${octMark} ${suffix} · velocity ${Math.round(velocity * 100)}%`;
 
   advanceHint(index);
 }

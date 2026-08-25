@@ -1,9 +1,5 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
 A reading-guide to how the work came together --- a map to your process, not an
 essay about it. Markers read this file and follow its citations; they don't
 trawl the repo for evidence you didn't point at, so if a moment mattered, cite
@@ -17,60 +13,69 @@ cover every deliverable.
 
 ## What I built
 
-One paragraph: the thing, and the idea behind it.
+Bianzhong: Resounding Bells is a bianzhong (编钟, the ancient Chinese bronze
+bell chime) you play live in the browser --- drag across bells for a
+glissando, strike position shifts pitch between a bell's two real tones
+(正鼓音/侧鼓音), and strike speed sets loudness. The bells are a real
+open-source 3D scan rather than a drawn shape, and every strike plays an
+actual recorded bianzhong sample rather than a synthesized tone, pitch-shifted
+to cover notes the recording set didn't include. A song picker lets a player
+either hear a short transcribed phrase auto-play or follow a highlighted
+sequence of bells and keys to play it themselves, entirely optional and never
+required to make the instrument work.
 
 ## The moments that mattered
 
-Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
-list short so each moment has room to do all four jobs:
+1. **The two-tier bell design sounded wrong even though it worked as
+   designed.** I'd built a second, smaller tier of bells that auto-echoed
+   whatever note was struck, specifically to answer a concern that a
+   real bianzhong has far more bells than a five-tone rack and a bigger rack
+   would be too crowded to actually play. The echo tier was a deliberate
+   answer to that: more bells visible, no extra bells to aim at. Once it was
+   actually playable, though, the verdict was that the echo itself just
+   didn't sound good, independent of whether the design problem it solved was
+   real. I dropped the auto-strike entirely and kept the tier as a silent,
+   idle-swaying visual layer, which keeps the "many bells, one hand" answer
+   intact without the sound anyone actually disliked. I confirmed by removing
+   the trigger call outright rather than muting its volume, so there was no
+   remaining code path that could make it audible again, and it was
+   contradicted (or not) in the very next round of listening
+   ([`024135f`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/024135f)).
 
-1. **what happened** --- the problem, or the thing that went wrong
-2. **what you did instead of the obvious thing** --- the call you made, and why
-   it beat the obvious one
-3. **how you knew it was right** --- the check you ran, the viewport you looked
-   at, what you read before accepting the diff
-4. **the citation** --- a commit or commit range, a `CLAUDE.md` change, a check
-   that went from red to green, a prompt paired with the commit it produced
+2. **A wrong guess about which line of a song is its "hook" cost two whole
+   attempts, and only outside knowledge fixed it.** For 兰亭序, I first
+   transcribed the bracketed instrumental intro, then the verse's opening
+   line, reasoning each time from the sheet music alone that it was the
+   recognizable part of the song. Both were confirmed wrong by ear, and on
+   the second miss I was told directly which line actually is the song's
+   hook ("无关风月，我题序等你回"), something no amount of careful
+   score-reading on my side could have told me since I have no way to hear
+   audio and no independent memory of exactly how this particular song goes.
+   I re-transcribed from the named line, and reasoned through why the earlier
+   sections specifically wouldn't have sounded recognizable regardless of
+   transcription accuracy --- an instrumental intro and a verse opening are
+   structurally the least memorable parts of a pop song even transcribed
+   perfectly. That reasoning, not just the retry, is what told me the
+   original two attempts had the right method and the wrong target
+   ([`d345ef4`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/d345ef4),
+   [`6c13e08`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/6c13e08)).
 
-Jobs 2 and 3 are the ones the repo can't tell a reader on its own, so they're
-where the marks are. The strongest moments are the ones where a correction
-landed in the **harness** --- the standards and checks your work has to satisfy
---- rather than in a retry: a rule added to `CLAUDE.md`, a check wired up, an
-attempt thrown away. Retrying until it passes is the routine case, and changing
-what the work runs against is the skilled one.
-
-Cite each moment as a link whose text is the commit hash or range and whose
-target is this repo's commit or compare URL, so a reader clicks straight to the
-evidence:
-
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
-
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
-
-> the prompt, verbatim
-
-Screenshots are welcome where one carries the verification better than a
-sentence does. Commit the file to this repo and link it with a **relative**
-path, which is what makes it render on GitHub: `![alt text](docs/before.png)`.
-Images don't count towards the word count and don't replace the citation.
-
-### A worked moment, for shape
-
-Delete this section along with the rest of the boilerplate --- it's here to show
-the four jobs in one paragraph, not to be imitated in content.
-
-> The date formatter kept coming back with `toLocaleDateString()` and no locale
-> argument, so the same build rendered differently on my machine and in CI. I'd
-> already re-prompted it twice, which fixed the line but not the habit, so the
-> third time I put the rule in `CLAUDE.md` instead
-> ([`3f9ac21`](https://github.com/YOUR-ORG/YOUR-REPO/commit/3f9ac21)) and added
-> a spec test that fails on a bare `toLocaleDateString`. That's what told me it
-> had actually taken: the test went red against the old code and green against
-> the new, and the next two features it wrote passed it without prompting
-> ([`3f9ac21...b7e0d14`](https://github.com/YOUR-ORG/YOUR-REPO/compare/3f9ac21...b7e0d14)).
+3. **A layout fix was rejected outright as "completely wrong," which was the
+   right call.** Trying to make the page fill the viewport without a dead gap
+   below the bells, I set the bell stage to grow to fill its container
+   (`flex: 1`). Combined with an existing formula that stretches each bell's
+   cord to reach the bottom of whatever height the stage has, that let the
+   stage balloon to nearly the full viewport on a tall screen, and the cords
+   stretched to match --- a hugely oversized, disproportionate instrument.
+   The response wasn't a request for a minor tweak; it was flagged as
+   completely broken, which was the correct read: this wasn't a tuning
+   problem, it was the wrong mechanism. I reverted the container to a capped
+   height and kept only the part that was actually correct --- bells filling
+   whatever height they're given, not the container growing without limit ---
+   and rebuilt before reporting back rather than assuming the revert was
+   sufficient
+   ([`bee0d43`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/bee0d43),
+   [`836a6b1`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/836a6b1)).
 
 ## Before you ship
 

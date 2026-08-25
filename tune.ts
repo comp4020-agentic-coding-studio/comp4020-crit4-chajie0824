@@ -183,18 +183,8 @@ const OU_LE_SONG_RAW = `
 2 1 1 -
 `;
 
-// The actual hook: "无关风月，我题序等你回" — the line the song is known
-// by, per direct correction. The verse-opening phrase tried before that
-// ("兰亭临帖...") wasn't it either, hence "completely unrecognizable" even
-// though its notes matched the score. Every note in this line is dotted in
-// the source, so that's folded into baseOct=1.
-const LAN_TING_XU_RAW = `
-2 - 05 61
-2. 1 21 32
-1 - 01 23
-`;
+// 兰亭序 was tried twice (the instrumental intro, then the verse opening)
+// and dropped both times as unrecognizable -- removed rather than keep
+// guessing at which section is the actual hook.
 
-export const SONGS: Song[] = [
-  { id: "oulesong", name: "欢乐颂", baseOct: 0, bpm: 120, steps: parseTune(OU_LE_SONG_RAW) },
-  { id: "lantingxu", name: "兰亭序", baseOct: 1, bpm: 76, steps: parseTune(LAN_TING_XU_RAW) },
-];
+export const SONGS: Song[] = [{ id: "oulesong", name: "Ode to Joy", baseOct: 0, bpm: 120, steps: parseTune(OU_LE_SONG_RAW) }];

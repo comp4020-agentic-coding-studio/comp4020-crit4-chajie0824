@@ -33,10 +33,10 @@ export function layoutMain(stage: Stage, count: number): BellVisual[] {
   const usable = Math.max(1, stage.width - marginX * 2);
   const bigR = Math.min(stage.height * 0.11, usable / count / 2.1);
   const smallR = bigR * 0.55;
-  // Cord length is picked per-bell so the bell's bottom edge lands near the
-  // bottom of the stage regardless of the (now compact, real-proportioned)
-  // body's own height — fills the space the stage actually has rather than
-  // leaving a dead gap below a short cord, or overflowing past the stage.
+  // Cord length targets the bottom of the stage on average (so the rack
+  // still fills the space rather than leaving a dead gap), but varies
+  // noticeably per bell rather than lining every bottom edge up neatly —
+  // real bianzhong racks hang at uneven heights, not a bottom-aligned row.
   const bottomTarget = stage.height * 0.94;
   const out: BellVisual[] = [];
   for (let i = 0; i < count; i++) {
@@ -44,8 +44,9 @@ export function layoutMain(stage: Stage, count: number): BellVisual[] {
     const cx = marginX + usable * t;
     const r = bigR + (smallR - bigR) * t;
     const bodyHeight = BODY_HEIGHT_RATIO * r;
-    const hang =
-      Math.max(r * 1.5, bottomTarget - stage.mainBeamY - bodyHeight) + Math.sin(i * 0.85) * r * 0.15;
+    const baseHang = Math.max(r * 1.5, bottomTarget - stage.mainBeamY - bodyHeight);
+    const wobble = Math.sin(i * 0.85) * r * 0.55 + Math.sin(i * 2.3 + 1) * r * 0.3;
+    const hang = Math.max(r * 1.2, baseHang + wobble);
     out.push({ cx, cy: stage.mainBeamY, r, hang, kind: "yong", phase: i * 0.7 });
   }
   return out;
