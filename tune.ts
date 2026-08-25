@@ -154,14 +154,14 @@ export function tuneTargetSpec(step: Extract<TuneStep, { kind: "note" }>, baseOc
   return { deg: step.deg, oct: baseOct + step.octShift };
 }
 
-export type Song = { id: string; name: string; baseOct: number; steps: TuneStep[] };
+export type Song = { id: string; name: string; baseOct: number; bpm: number; steps: TuneStep[] };
 
 // 山止川行 and 天地缓缓 were transcribed here too, but neither could be
 // confirmed correct by ear (only 欢乐颂 was) and were dropped rather than
 // leave unverified content shipped. Re-add once there's a way to check them.
 
-// 1=C, the only one of the four songs that actually needs fa (4) — the
-// reason MAIN_SPEC has it at all. Uses a "34" grace-note figure (two
+// 1=C, the only current song that actually needs fa (4) — the reason
+// MAIN_SPEC has it at all. Uses a "34" grace-note figure (two
 // sixteenths sharing a beat) in its B phrase; a couple of small sub-digit
 // marks in the source under those bars looked like fingering/tuplet
 // annotations, not separate pitches, so they aren't transcribed as notes.
@@ -183,22 +183,18 @@ const OU_LE_SONG_RAW = `
 2 1 1 -
 `;
 
-// 兰亭序's opening vocal hook ("兰亭临帖，行书如行云流水，水月下门，推心
-// 细如你脚步") rather than the wordless instrumental intro tried earlier,
-// which is why that didn't sound recognizable even if the notes were right.
-// Register note: the intro sits a full octave above the score's own written
-// pitch (dotted throughout), but the verse drops back to normal register
-// for singing — only the two "1"s in the last bar actually carry a dot in
-// the source, marked here with "^" rather than shifting baseOct for the
-// whole line.
+// The actual hook: "无关风月，我题序等你回" — the line the song is known
+// by, per direct correction. The verse-opening phrase tried before that
+// ("兰亭临帖...") wasn't it either, hence "completely unrecognizable" even
+// though its notes matched the score. Every note in this line is dotted in
+// the source, so that's folded into baseOct=1.
 const LAN_TING_XU_RAW = `
-0 5 3 5
-6 35 65 32
-3 - 03 23
-1^ 61^ 65 31
+2 - 05 61
+2. 1 21 32
+1 - 01 23
 `;
 
 export const SONGS: Song[] = [
-  { id: "oulesong", name: "欢乐颂", baseOct: 0, steps: parseTune(OU_LE_SONG_RAW) },
-  { id: "lantingxu", name: "兰亭序", baseOct: 0, steps: parseTune(LAN_TING_XU_RAW) },
+  { id: "oulesong", name: "欢乐颂", baseOct: 0, bpm: 120, steps: parseTune(OU_LE_SONG_RAW) },
+  { id: "lantingxu", name: "兰亭序", baseOct: 1, bpm: 76, steps: parseTune(LAN_TING_XU_RAW) },
 ];

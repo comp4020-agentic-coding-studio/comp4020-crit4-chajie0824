@@ -138,9 +138,6 @@ const mainActive = new Map<number, ActiveStrike[]>();
 const KEYS = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "a", "s", "d", "f", "g", "h", "j"];
 
 const MAX_SPEED = 1.4; // px/ms, clamps velocity mapping
-// ♩=92 as marked on the score, slowed by 1.4x — real tempo felt rushed for
-// an instrument demo where the point is to actually hear each strike land.
-const BEAT_MS = (60000 / 92) * 1.4;
 
 let lastStruck = -1;
 let lastPointerTime = 0;
@@ -256,7 +253,8 @@ function stepPlayback(stepIndex: number): void {
     const targetIndex = findBellIndex(mainBells, tuneTargetSpec(step, currentSong.baseOct));
     if (targetIndex !== -1) strikeMain(targetIndex, 0.6, 0);
   }
-  playTimer = window.setTimeout(() => stepPlayback(stepIndex + 1), step.beats * BEAT_MS);
+  const beatMs = 60000 / currentSong.bpm;
+  playTimer = window.setTimeout(() => stepPlayback(stepIndex + 1), step.beats * beatMs);
 }
 
 async function startPlayback(): Promise<void> {
