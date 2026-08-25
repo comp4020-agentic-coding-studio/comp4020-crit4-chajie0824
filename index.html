@@ -35,23 +35,24 @@
           你的浏览器不支持 Canvas，无法显示这件编钟乐器。
         </canvas>
         <div class="readout" id="readout" aria-live="polite"></div>
-        <div class="hint-panel">
-          <div class="hint-buttons">
-            <select id="songSelect" aria-label="选择曲目">
-              <option value="shanzhichuanxing">山止川行</option>
-              <option value="tiandihuanhuan">天地缓缓</option>
-            </select>
-            <button type="button" id="playToggle" aria-pressed="false">▶ 播放《山止川行》</button>
-            <button type="button" id="hintToggle" aria-pressed="false">🔔 跟着弹</button>
-          </div>
-          <div class="hint-next" id="hintNext" aria-live="polite" hidden></div>
-          <div class="hint-strip" id="hintStrip" hidden></div>
+      </div>
+      <div class="hint-panel">
+        <div class="hint-buttons">
+          <select id="songSelect" aria-label="选择曲目">
+            <option value="shanzhichuanxing">山止川行</option>
+            <option value="tiandihuanhuan">天地缓缓</option>
+            <option value="oulesong">欢乐颂</option>
+          </select>
+          <button type="button" id="playToggle" aria-pressed="false">▶ 播放《山止川行》</button>
+          <button type="button" id="hintToggle" aria-pressed="false">🔔 跟着弹</button>
         </div>
+        <div class="hint-next" id="hintNext" aria-live="polite" hidden></div>
+        <div class="hint-strip" id="hintStrip" hidden></div>
       </div>
       <p class="footer-note">
         拖过几口钟能连奏出滑音；敲在钟的正中是「正鼓音」，偏向钟边是「侧鼓音」，两者相差一个小三度——真正的编钟就是这样一钟两音的。
-        键盘 <code>A S D F G H J K L ; '</code> 也能弹这一排钟。上方一排小钟是钮钟，只作陈设，不发声。
-        先选一首曲子，点「播放」直接听一遍前奏；点「跟着弹」会用光圈标出下一口该敲的钟，跟着自己弹一遍。
+        键盘 <code>Q W E R T Y U I O P A S D F G H J</code> 对应从低到高每一口钟。上方一排小钟是钮钟，只作陈设，不发声。
+        先选一首曲子，点「播放」直接听一遍前奏；点「跟着弹」会用光圈标出下一口该敲的钟，提示区的字母就是该按的键。
       </p>
       <p class="credit-note">
         钟声取自武汉音乐学院仿曾侯乙编钟采样音源（聂凯文录制，非商业使用），部分音高由邻近采样按半音差移调而成。

@@ -4,7 +4,7 @@
 export type NoteSpec = { deg: number; oct: number };
 export type Bell = NoteSpec & { freq: number; index: number };
 
-const DEGREE_SEMITONES: Record<number, number> = { 1: 0, 2: 2, 3: 4, 5: 7, 6: 9, 7: 11 };
+const DEGREE_SEMITONES: Record<number, number> = { 1: 0, 2: 2, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11 };
 const ROOT_D3 = 146.83; // D3
 
 export function freqFor(deg: number, oct: number): number {
@@ -13,21 +13,25 @@ export function freqFor(deg: number, oct: number): number {
   return ROOT_D3 * Math.pow(2, oct + semis / 12);
 }
 
-// The playable rack (甬钟 tier): a low anchor pair, two full hexatonic
-// octaves (do re mi sol la ti — no fa, matching the pentatonic-plus-变宫
-// scale real bianzhong ensembles play), and a capstone high tonic.
+// The playable rack (甬钟 tier): a low anchor pair, two full octaves of
+// do-re-mi-fa-sol-la-ti, and a capstone high tonic. Fa (4) was added
+// alongside 欢乐颂 — real bianzhong repertoire is often pentatonic-plus-变宫
+// (no fa), but a plain diatonic tune like this genuinely needs it, and real
+// bianzhong sets are documented as capable of full 7-tone melodies too.
 export const MAIN_SPEC: NoteSpec[] = [
   { deg: 6, oct: -1 },
   { deg: 7, oct: -1 },
   { deg: 1, oct: 0 },
   { deg: 2, oct: 0 },
   { deg: 3, oct: 0 },
+  { deg: 4, oct: 0 },
   { deg: 5, oct: 0 },
   { deg: 6, oct: 0 },
   { deg: 7, oct: 0 },
   { deg: 1, oct: 1 },
   { deg: 2, oct: 1 },
   { deg: 3, oct: 1 },
+  { deg: 4, oct: 1 },
   { deg: 5, oct: 1 },
   { deg: 6, oct: 1 },
   { deg: 7, oct: 1 },
@@ -60,12 +64,14 @@ const SAMPLE_TABLE: Record<string, SampleRef> = {
   "1,0": { file: "g3.mp3", rate: 0.749154 }, // D3, from G3 (-5 semitones)
   "2,0": { file: "g3.mp3", rate: 0.840896 }, // E3, from G3 (-3 semitones)
   "3,0": { file: "g3.mp3", rate: 0.943874 }, // F#3, from G3 (-1 semitone)
+  "4,0": { file: "g3.mp3", rate: 1 }, // G3, exact
   "5,0": { file: "a3.mp3", rate: 1 },
   "6,0": { file: "b3.mp3", rate: 1 },
   "7,0": { file: "c4.mp3", rate: 1.059463 }, // C#4, from C4 (+1 semitone)
   "1,1": { file: "d4.mp3", rate: 1 },
   "2,1": { file: "e4.mp3", rate: 1 },
   "3,1": { file: "fs4.mp3", rate: 1 },
+  "4,1": { file: "g4.mp3", rate: 1 }, // G4, exact
   "5,1": { file: "a4.mp3", rate: 1 },
   "6,1": { file: "b4.mp3", rate: 1 },
   "7,1": { file: "cs5.mp3", rate: 1 },
@@ -189,7 +195,31 @@ const TIAN_DI_HUAN_HUAN_RAW = `
 76 76 7 -
 `;
 
+// 1=C, the only one of the four songs that actually needs fa (4) — the
+// reason MAIN_SPEC has it at all. Uses a "34" grace-note figure (two
+// sixteenths sharing a beat) in its B phrase; a couple of small sub-digit
+// marks in the source under those bars looked like fingering/tuplet
+// annotations, not separate pitches, so they aren't transcribed as notes.
+const OU_LE_SONG_RAW = `
+3 3 4 5
+5 4 3 2
+1 1 2 3
+3 2 2 -
+3 3 4 5
+5 4 3 2
+1 1 2 3
+2 1 1 -
+2 34 3 1
+2 34 3 2
+1 2 0 0
+3 3 4 5
+5 4 3 2
+1 1 2 3
+2 1 1 -
+`;
+
 export const SONGS: Song[] = [
   { id: "shanzhichuanxing", name: "山止川行", baseOct: 0, steps: parseTune(SHAN_ZHI_CHUAN_XING_RAW) },
   { id: "tiandihuanhuan", name: "天地缓缓", baseOct: 0, steps: parseTune(TIAN_DI_HUAN_HUAN_RAW) },
+  { id: "oulesong", name: "欢乐颂", baseOct: 0, steps: parseTune(OU_LE_SONG_RAW) },
 ];

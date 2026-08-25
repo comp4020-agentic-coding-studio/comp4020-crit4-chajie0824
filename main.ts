@@ -1,6 +1,14 @@
 import * as THREE from "three";
-import { strike } from "./audio.ts";
-import { buildMainBells, findBellIndex, isNoteStep, SHIMMER_DEGREES, SONGS, tuneTargetSpec } from "./tune.ts";
+import { samplesReady, strike } from "./audio.ts";
+import {
+  buildMainBells,
+  findBellIndex,
+  isNoteStep,
+  SHIMMER_DEGREES,
+  SONGS,
+  tuneTargetSpec,
+  type TuneStep,
+} from "./tune.ts";
 import { boundsOf, layoutMain, layoutShimmer, type BellVisual } from "./scene.ts";
 import {
   applyStrikeGlow,
@@ -123,8 +131,16 @@ loadBodyGeometry()
 type ActiveStrike = { t: number };
 const mainActive = new Map<number, ActiveStrike[]>();
 
+// Plain letters only, left-to-right matching the bell order — no ";"/"'"
+// (their physical position and even presence varies across keyboard
+// layouts, so they silently didn't work for some players). One key per
+// main bell, so every bell is keyboard-reachable.
+const KEYS = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "a", "s", "d", "f", "g", "h", "j"];
+
 const MAX_SPEED = 1.4; // px/ms, clamps velocity mapping
-const BEAT_MS = 60000 / 92; // ♩=92, as marked on the score
+// ♩=92 as marked on the score, slowed by 1.4x — real tempo felt rushed for
+// an instrument demo where the point is to actually hear each strike land.
+const BEAT_MS = (60000 / 92) * 1.4;
 
 let lastStruck = -1;
 let lastPointerTime = 0;
@@ -146,7 +162,7 @@ function blendFor(index: number, x: number): number {
 }
 
 function noteName(deg: number): string {
-  const names: Record<number, string> = { 1: "宫", 2: "商", 3: "角", 5: "徵", 6: "羽", 7: "变宫" };
+  const names: Record<number, string> = { 1: "宫", 2: "商", 3: "角", 4: "清角", 5: "徵", 6: "羽", 7: "变宫" };
   return names[deg] ?? String(deg);
 }
 
@@ -161,8 +177,9 @@ let hintOn = false;
 let isPlaying = false;
 let playTimer: number | null = null;
 
-function octaveDot(octShift: number): string {
-  return octShift > 0 ? "̇" : octShift < 0 ? "̣" : "";
+function keyLabelForStep(step: Extract<TuneStep, { kind: "note" }>): string {
+  const idx = findBellIndex(mainBells, tuneTargetSpec(step, currentSong.baseOct));
+  return idx === -1 ? "?" : KEYS[idx].toUpperCase();
 }
 
 function updateHintUI(): void {
@@ -176,14 +193,14 @@ function updateHintUI(): void {
   for (let i = 0; i < windowSize; i++) {
     const step = noteSteps[(notePosition + i) % noteSteps.length];
     const span = document.createElement("span");
-    span.textContent = String(step.deg) + octaveDot(step.octShift);
+    span.textContent = keyLabelForStep(step);
     if (i === 0) span.className = "current";
     hintStrip.appendChild(span);
   }
 
   const target = noteSteps[notePosition];
   const octMark = target.octShift > 0 ? "（高音）" : target.octShift < 0 ? "（低音）" : "";
-  hintNext.textContent = `下一步：${noteName(target.deg)}${octMark} · ${notePosition + 1}/${noteSteps.length}`;
+  hintNext.textContent = `下一步：${noteName(target.deg)}${octMark} · 按 ${keyLabelForStep(target)} 键 · ${notePosition + 1}/${noteSteps.length}`;
 }
 
 function currentHintBellIndex(): number {
@@ -213,6 +230,7 @@ function stopPlayback(): void {
     window.clearTimeout(playTimer);
     playTimer = null;
   }
+  playToggle.disabled = false;
   playToggle.textContent = `▶ 播放《${currentSong.name}》`;
   playToggle.setAttribute("aria-pressed", "false");
   if (!hintOn) notePosition = 0;
@@ -233,8 +251,17 @@ function stepPlayback(stepIndex: number): void {
   playTimer = window.setTimeout(() => stepPlayback(stepIndex + 1), step.beats * BEAT_MS);
 }
 
-function startPlayback(): void {
+async function startPlayback(): Promise<void> {
   isPlaying = true;
+  playToggle.disabled = true;
+  playToggle.textContent = "加载中…";
+  // Auto-play fires its first notes within milliseconds, easily racing the
+  // sample fetch/decode — wait for it, or an early note plays as a jarring
+  // synth fallback instead of the real recording (audible as a wrong-timbre
+  // "gong" hit mid-tune, since the other notes are the real thing).
+  await samplesReady();
+  if (!isPlaying) return; // stopped while loading
+  playToggle.disabled = false;
   playToggle.textContent = "⏸ 停止播放";
   playToggle.setAttribute("aria-pressed", "true");
   notePosition = 0;
@@ -244,7 +271,7 @@ function startPlayback(): void {
 
 playToggle.addEventListener("click", () => {
   if (isPlaying) stopPlayback();
-  else startPlayback();
+  else void startPlayback();
 });
 
 function selectSong(id: string): void {
@@ -328,8 +355,6 @@ canvas.addEventListener("pointercancel", () => {
 canvas.addEventListener("pointerleave", () => {
   lastStruck = -1;
 });
-
-const KEYS = ["a", "s", "d", "f", "g", "h", "j", "k", "l", ";", "'", "z", "x", "c", "v"];
 
 window.addEventListener("keydown", (ev) => {
   if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.repeat) return;

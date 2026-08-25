@@ -30,24 +30,30 @@ const SAMPLE_FILES = [
   "fs4.mp3",
   "fs6.mp3",
   "g3.mp3",
+  "g4.mp3",
 ];
 
 let engine: { ctx: AudioContext; master: GainNode } | null = null;
 const buffers = new Map<string, AudioBuffer>();
-let loadStarted = false;
+let loadPromise: Promise<void> | null = null;
 
-function loadAllSamples(ctx: AudioContext): void {
-  if (loadStarted) return;
-  loadStarted = true;
-  for (const name of SAMPLE_FILES) {
-    fetch(`${SAMPLE_BASE}${name}`)
-      .then((res) => res.arrayBuffer())
-      .then((data) => ctx.decodeAudioData(data))
-      .then((buffer) => buffers.set(name, buffer))
-      .catch(() => {
-        // Left unset: strike() falls back to synthesis for this sample.
-      });
+function loadAllSamples(ctx: AudioContext): Promise<void> {
+  if (!loadPromise) {
+    loadPromise = Promise.all(
+      SAMPLE_FILES.map((name) =>
+        fetch(`${SAMPLE_BASE}${name}`)
+          .then((res) => res.arrayBuffer())
+          .then((data) => ctx.decodeAudioData(data))
+          .then((buffer) => {
+            buffers.set(name, buffer);
+          })
+          .catch(() => {
+            // Left unset: strike() falls back to synthesis for this sample.
+          }),
+      ),
+    ).then(() => undefined);
   }
+  return loadPromise;
 }
 
 function ensureAudio(): { ctx: AudioContext; master: GainNode } {
@@ -69,6 +75,17 @@ function ensureAudio(): { ctx: AudioContext; master: GainNode } {
   }
   if (engine.ctx.state === "suspended") void engine.ctx.resume();
   return engine;
+}
+
+// Auto-play fires notes on a tight timer starting immediately, so it can
+// easily race the (small, but not instant) sample fetch/decode and briefly
+// fall back to synthesis mid-tune — audible as one oddly-timbred note.
+// Manual play doesn't need this: a human clicking a bell within the first
+// fraction of a second of the page loading is not a real scenario worth
+// adding input latency for.
+export function samplesReady(): Promise<void> {
+  const { ctx } = ensureAudio();
+  return loadAllSamples(ctx);
 }
 
 export type StrikeOptions = {

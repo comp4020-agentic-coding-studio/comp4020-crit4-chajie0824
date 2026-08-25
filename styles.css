@@ -94,14 +94,11 @@ main {
 }
 
 .hint-panel {
-  position: absolute;
-  left: 1rem;
-  bottom: 1rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.5rem;
-  max-width: min(80vw, 30rem);
+  padding: 1rem 1.5rem 0;
 }
 
 .hint-buttons {
