@@ -167,17 +167,20 @@ function blendFor(index: number, x: number): number {
 }
 
 // Traditional Chinese scale-degree names (gongche/五声 theory), not a direct
-// translation of do-re-mi-fa-sol-la-ti — kept in pinyin since that's the
-// name they actually have, rather than forcing an inexact English word.
+// translation of do-re-mi-fa-sol-la-ti. Pinyin alone ("Qingjiao") isn't
+// actually recognizable even to a Chinese speaker who knows the core five
+// (宫商角徵羽) but not the two added for a full seven-tone scale (清角/变宫)
+// — showing the characters themselves plus the solfège equivalent side by
+// side is what actually identifies the note, not the romanization alone.
 function noteName(deg: number): string {
   const names: Record<number, string> = {
-    1: "Gong",
-    2: "Shang",
-    3: "Jue",
-    4: "Qingjiao",
-    5: "Zhi",
-    6: "Yu",
-    7: "Biangong",
+    1: "宫 (Gōng) · Do",
+    2: "商 (Shāng) · Re",
+    3: "角 (Jué) · Mi",
+    4: "清角 (Qīngjiǎo) · Fa",
+    5: "徵 (Zhǐ) · Sol",
+    6: "羽 (Yǔ) · La",
+    7: "变宫 (Biàngōng) · Ti",
   };
   return names[deg] ?? String(deg);
 }
@@ -391,6 +394,13 @@ window.addEventListener("keydown", (ev) => {
   if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.repeat) return;
   const idx = KEYS.indexOf(ev.key.toLowerCase());
   if (idx === -1 || idx >= mainBells.length) return;
+  // A bare letter key matching one of ours: claim it outright so nothing
+  // else on the page (a focused <select>'s native letter-jump, browser
+  // find-as-you-type) can also act on it. This can't do anything about a
+  // browser extension intercepting the key before the page ever sees it
+  // (Vimium-style bare-letter shortcuts are the usual cause of one specific
+  // key silently doing nothing) -- that has to be fixed on that end.
+  ev.preventDefault();
   strikeMain(idx, 0.6, 0);
 });
 
