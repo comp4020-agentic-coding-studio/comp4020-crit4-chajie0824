@@ -156,44 +156,9 @@ export function tuneTargetSpec(step: Extract<TuneStep, { kind: "note" }>, baseOc
 
 export type Song = { id: string; name: string; baseOct: number; steps: TuneStep[] };
 
-// The bracketed instrumental intro only, for both songs below — same scope
-// as a hint/demo needs, not a full transcription of every verse.
-const SHAN_ZHI_CHUAN_XING_RAW = `
-3 5
-5 6 6 676 56
-3 5 5 5 35
-56 6 71^7 65
-3 - 0 35
-56 6 676 56
-35 5 5 23
-21 6 235
-6 - 0 35
-56 6 676 56
-35 25 3 35
-56 6 71^7 65
-23. 0 35
-56 06 676 56
-35 25 3 23
-21 6 235
-566 - -
-`;
-
-// 1=bA in the original score; played here on this instrument's own D-rooted
-// scale (movable-do), so it comes out transposed rather than in bA.
-const TIAN_DI_HUAN_HUAN_RAW = `
-32 32 65 65
-32 32 61 2^1
-32 32 7 5
-65 32 6 32
-6^6 32 32
-6^6 32 32
-6 07 32 32
-65 65 3 -
-6^6 3 3
-0 06 76 76
-3 - - -
-76 76 7 -
-`;
+// 山止川行 and 天地缓缓 were transcribed here too, but neither could be
+// confirmed correct by ear (only 欢乐颂 was) and were dropped rather than
+// leave unverified content shipped. Re-add once there's a way to check them.
 
 // 1=C, the only one of the four songs that actually needs fa (4) — the
 // reason MAIN_SPEC has it at all. Uses a "34" grace-note figure (two
@@ -218,8 +183,4 @@ const OU_LE_SONG_RAW = `
 2 1 1 -
 `;
 
-export const SONGS: Song[] = [
-  { id: "shanzhichuanxing", name: "山止川行", baseOct: 0, steps: parseTune(SHAN_ZHI_CHUAN_XING_RAW) },
-  { id: "tiandihuanhuan", name: "天地缓缓", baseOct: 0, steps: parseTune(TIAN_DI_HUAN_HUAN_RAW) },
-  { id: "oulesong", name: "欢乐颂", baseOct: 0, steps: parseTune(OU_LE_SONG_RAW) },
-];
+export const SONGS: Song[] = [{ id: "oulesong", name: "欢乐颂", baseOct: 0, steps: parseTune(OU_LE_SONG_RAW) }];

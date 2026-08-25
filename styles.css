@@ -67,7 +67,7 @@ main {
 .stage {
   position: relative;
   width: 100%;
-  height: min(42vh, 380px);
+  height: min(58vh, 480px);
   touch-action: none;
   overflow: hidden;
   background: radial-gradient(ellipse at 50% 30%, var(--bg-glow), var(--bg-deep) 70%);

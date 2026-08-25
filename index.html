@@ -6,7 +6,7 @@
     <title>编钟绕梁</title>
     <meta
       name="description"
-      content="一件可以自由弹奏的青铜编钟乐器：拖动可连奏滑音，力度和敲击位置决定音色，一键播放或跟着提示敲完《山止川行》的前奏。"
+      content="一件可以自由弹奏的青铜编钟乐器：拖动可连奏滑音，力度和敲击位置决定音色，一键播放或跟着提示敲完一段曲子。"
     />
 
     <meta property="og:type" content="website" />
@@ -39,11 +39,9 @@
       <div class="hint-panel">
         <div class="hint-buttons">
           <select id="songSelect" aria-label="选择曲目">
-            <option value="shanzhichuanxing">山止川行</option>
-            <option value="tiandihuanhuan">天地缓缓</option>
             <option value="oulesong">欢乐颂</option>
           </select>
-          <button type="button" id="playToggle" aria-pressed="false">▶ 播放《山止川行》</button>
+          <button type="button" id="playToggle" aria-pressed="false">▶ 播放《欢乐颂》</button>
           <button type="button" id="hintToggle" aria-pressed="false">🔔 跟着弹</button>
         </div>
         <div class="hint-next" id="hintNext" aria-live="polite" hidden></div>

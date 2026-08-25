@@ -22,21 +22,30 @@ export type Stage = {
   shimmerBeamY: number;
 };
 
+// Matches scene3d.ts's BODY_HEIGHT_RATIO (the scanned model's real
+// height/half-width) — kept as a plain number here rather than an import so
+// 2D hit-testing stays independent of the 3D rendering module, per the file
+// header above.
+const BODY_HEIGHT_RATIO = 2.3145;
+
 export function layoutMain(stage: Stage, count: number): BellVisual[] {
   const marginX = stage.width * 0.06;
   const usable = Math.max(1, stage.width - marginX * 2);
-  // The body is now a compact real-proportioned model (not the old tall
-  // stylized shape), so the cord only needs to be a modest multiple of the
-  // bell's own radius rather than stretching to fill the stage's height —
-  // that stretching is what was pushing the whole page past one screen.
   const bigR = Math.min(stage.height * 0.11, usable / count / 2.1);
   const smallR = bigR * 0.55;
+  // Cord length is picked per-bell so the bell's bottom edge lands near the
+  // bottom of the stage regardless of the (now compact, real-proportioned)
+  // body's own height — fills the space the stage actually has rather than
+  // leaving a dead gap below a short cord, or overflowing past the stage.
+  const bottomTarget = stage.height * 0.94;
   const out: BellVisual[] = [];
   for (let i = 0; i < count; i++) {
     const t = count === 1 ? 0 : i / (count - 1);
     const cx = marginX + usable * t;
     const r = bigR + (smallR - bigR) * t;
-    const hang = r * (2.4 - t * 0.3) + Math.sin(i * 0.85) * r * 0.15;
+    const bodyHeight = BODY_HEIGHT_RATIO * r;
+    const hang =
+      Math.max(r * 1.5, bottomTarget - stage.mainBeamY - bodyHeight) + Math.sin(i * 0.85) * r * 0.15;
     out.push({ cx, cy: stage.mainBeamY, r, hang, kind: "yong", phase: i * 0.7 });
   }
   return out;
@@ -55,12 +64,6 @@ export function layoutShimmer(stage: Stage, count: number): BellVisual[] {
   }
   return out;
 }
-
-// Matches scene3d.ts's BODY_HEIGHT_RATIO (the scanned model's real
-// height/half-width) — kept as a plain number here rather than an import so
-// 2D hit-testing stays independent of the 3D rendering module, per the file
-// header above.
-const BODY_HEIGHT_RATIO = 2.3145;
 
 export function boundsOf(v: BellVisual): { x0: number; x1: number; y0: number; y1: number } {
   // The body itself is compact (real bianzhong proportions, not the tall
