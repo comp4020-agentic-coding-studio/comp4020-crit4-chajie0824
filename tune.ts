@@ -49,30 +49,65 @@ export function findBellIndex(bells: Bell[], spec: NoteSpec): number {
 export const SHIMMER_DEGREES = [1, 2, 3, 5, 6, 7];
 export const SHIMMER_OCT = 3;
 
-// The bracketed instrumental intro of "山止川行" (1=D, 4/4), transcribed as
-// the sequence of struck pitches: held notes ("-") and rests ("0") carry no
-// new strike, and the recurring pickup figure re-strikes the note it grew out
-// of, exactly as a struck bell (it can't be sustained by holding) would. The
-// token 8 marks the high tonic reached by the "7 i 7" neighbour-tone figure.
-export const SHAN_ZHI_CHUAN_XING: number[] = [
-  3, 5,
-  5, 6, 6, 6, 7, 6, 5, 6,
-  3, 5, 5, 5, 3, 5,
-  5, 6, 6, 7, 8, 7, 6, 5,
-  3, 3, 5,
-  5, 6, 6, 6, 7, 6, 5, 6,
-  3, 5, 5, 5, 2, 3,
-  2, 1, 6, 2, 3, 5,
-  6, 3, 5,
-  5, 6, 6, 6, 7, 6, 5, 6,
-  3, 5, 2, 5, 3, 3, 5,
-  5, 6, 6, 7, 8, 7, 6, 5,
-  2, 3, 3, 5,
-  5, 6, 6, 6, 7, 6, 5, 6,
-  3, 5, 2, 5, 3, 2, 3,
-  2, 1, 6, 2, 3, 5,
-  5, 6, 6,
-];
+// The bracketed instrumental intro of "山止川行" (1=D, 4/4), transcribed
+// beat-group by beat-group exactly as the score groups them: each
+// space-separated group is one beat, split evenly among however many digits
+// share it. "-" holds the previous beat, "0" rests it — both are real time,
+// not skipped, which matters for auto-play timing. A "." after a digit
+// stretches it by one extra held beat. Token 8 is the high tonic reached by
+// the "7 i 7" neighbour-tone figure (a dotted "1" over "7"s in the score).
+const RAW_SCORE = `
+3 5
+5 6 6 676 56
+3 5 5 5 35
+56 6 717 65
+3 - 0 35
+56 6 676 56
+35 5 5 23
+21 6 235
+6 - 0 35
+56 6 676 56
+35 25 3 35
+56 6 717 65
+23. 0 35
+56 06 676 56
+35 25 3 23
+21 6 235
+566 - -
+`;
+
+export type TuneStep = { kind: "note"; token: number; beats: number } | { kind: "silence"; beats: number };
+
+function parseBeatGroup(raw: string): TuneStep[] {
+  if (raw === "-" || raw === "0") return [{ kind: "silence", beats: 1 }];
+
+  const extraHold = raw.endsWith(".");
+  const body = extraHold ? raw.slice(0, -1) : raw;
+  const chars = body.split("");
+  const beats = 1 / chars.length;
+
+  const steps: TuneStep[] = chars.map((c, i) => {
+    if (c === "0") return { kind: "silence", beats };
+    const isHighDo = c === "1" && chars[i - 1] === "7" && chars[i + 1] === "7";
+    return { kind: "note", token: isHighDo ? 8 : Number(c), beats };
+  });
+  if (extraHold) steps.push({ kind: "silence", beats: 1 });
+  return steps;
+}
+
+function parseTune(raw: string): TuneStep[] {
+  return raw
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .flatMap(parseBeatGroup);
+}
+
+export const SHAN_ZHI_CHUAN_XING: TuneStep[] = parseTune(RAW_SCORE);
+
+export function isNoteStep(step: TuneStep): step is Extract<TuneStep, { kind: "note" }> {
+  return step.kind === "note";
+}
 
 export function tuneTargetSpec(token: number): NoteSpec {
   return token === 8 ? { deg: 1, oct: 1 } : { deg: token, oct: 0 };

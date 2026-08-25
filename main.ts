@@ -1,22 +1,45 @@
+import * as THREE from "three";
 import { strike } from "./audio.ts";
 import {
   buildMainBells,
   findBellIndex,
   freqFor,
+  isNoteStep,
   SHAN_ZHI_CHUAN_XING,
   SHIMMER_DEGREES,
   SHIMMER_OCT,
   tuneTargetSpec,
 } from "./tune.ts";
-import { boundsOf, drawBeam, drawBell, layoutMain, layoutShimmer, type BellVisual } from "./scene.ts";
+import { boundsOf, layoutMain, layoutShimmer, type BellVisual } from "./scene.ts";
+import {
+  buildBellGroup,
+  createBeam,
+  createDetailTexture,
+  createRenderer,
+  createScene,
+  createTargetRing,
+  positionBeam,
+  resizeCamera,
+  type Bell3D,
+} from "./scene3d.ts";
 
 const stageQuery = document.querySelector<HTMLDivElement>("#stage");
 const canvasQuery = document.querySelector<HTMLCanvasElement>("#bells");
 const readoutQuery = document.querySelector<HTMLDivElement>("#readout");
 const hintToggleQuery = document.querySelector<HTMLButtonElement>("#hintToggle");
+const playToggleQuery = document.querySelector<HTMLButtonElement>("#playToggle");
 const hintStripQuery = document.querySelector<HTMLDivElement>("#hintStrip");
+const hintNextQuery = document.querySelector<HTMLDivElement>("#hintNext");
 
-if (!stageQuery || !canvasQuery || !readoutQuery || !hintToggleQuery || !hintStripQuery) {
+if (
+  !stageQuery ||
+  !canvasQuery ||
+  !readoutQuery ||
+  !hintToggleQuery ||
+  !playToggleQuery ||
+  !hintStripQuery ||
+  !hintNextQuery
+) {
   throw new Error("bianzhong: expected stage markup is missing");
 }
 
@@ -27,32 +50,61 @@ const stageEl: HTMLDivElement = stageQuery;
 const canvas: HTMLCanvasElement = canvasQuery;
 const readout: HTMLDivElement = readoutQuery;
 const hintToggle: HTMLButtonElement = hintToggleQuery;
+const playToggle: HTMLButtonElement = playToggleQuery;
 const hintStrip: HTMLDivElement = hintStripQuery;
-
-const ctxQuery = canvas.getContext("2d");
-if (!ctxQuery) throw new Error("bianzhong: 2d canvas context unavailable");
-const ctx: CanvasRenderingContext2D = ctxQuery;
+const hintNext: HTMLDivElement = hintNextQuery;
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const renderer = createRenderer(canvas);
+const { scene, camera } = createScene();
+const detailTexture = createDetailTexture();
+const targetRing = createTargetRing();
+scene.add(targetRing);
+const mainBeam = createBeam();
+const shimmerBeam = createBeam();
+scene.add(mainBeam, shimmerBeam);
 
 const mainBells = buildMainBells();
 let mainVisuals: BellVisual[] = [];
 let shimmerVisuals: BellVisual[] = [];
+let mainGroups: Bell3D[] = [];
+let shimmerGroups: Bell3D[] = [];
 let width = 0;
 let height = 0;
 
+function disposeBell(b: Bell3D): void {
+  scene.remove(b.group);
+  b.group.traverse((obj) => {
+    if (obj instanceof THREE.Mesh) obj.geometry.dispose();
+  });
+  b.material.dispose();
+}
+
+function rebuildBells(visuals: BellVisual[], existing: Bell3D[]): Bell3D[] {
+  existing.forEach(disposeBell);
+  return visuals.map((v) => {
+    const b = buildBellGroup(v, detailTexture);
+    scene.add(b.group);
+    return b;
+  });
+}
+
 function resize(): void {
   const rect = stageEl.getBoundingClientRect();
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
   width = rect.width;
   height = rect.height;
-  canvas.width = Math.round(width * dpr);
-  canvas.height = Math.round(height * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  renderer.setSize(width, height, false);
+  resizeCamera(camera, width, height);
 
   const stage = { width, height, mainBeamY: height * 0.24, shimmerBeamY: height * 0.08 };
   mainVisuals = layoutMain(stage, mainBells.length);
   shimmerVisuals = layoutShimmer(stage, SHIMMER_DEGREES.length);
+  positionBeam(mainBeam, stage.mainBeamY, width);
+  positionBeam(shimmerBeam, stage.shimmerBeamY, width);
+
+  mainGroups = rebuildBells(mainVisuals, mainGroups);
+  shimmerGroups = rebuildBells(shimmerVisuals, shimmerGroups);
 }
 
 new ResizeObserver(resize).observe(stageEl);
@@ -64,6 +116,7 @@ const shimmerActive = new Map<number, ActiveStrike[]>();
 
 const CORNER_RATIO = Math.pow(2, 3 / 12); // minor third between 正鼓音 and 侧鼓音
 const MAX_SPEED = 1.4; // px/ms, clamps velocity mapping
+const BEAT_MS = 60000 / 92; // ♩=92, as marked on the score
 
 let lastStruck = -1;
 let lastPointerTime = 0;
@@ -89,47 +142,99 @@ function noteName(deg: number): string {
   return names[deg] ?? String(deg);
 }
 
+// Follow-along ("跟着弹") and auto-play ("播放") share one position in the
+// note sequence: playback is just the machine striking the correct bell for
+// you on a beat clock, which naturally advances the same counter a real
+// strike would.
+const noteSteps = SHAN_ZHI_CHUAN_XING.filter(isNoteStep);
+let notePosition = 0;
 let hintOn = false;
-let hintIndex = 0;
+let isPlaying = false;
+let playTimer: number | null = null;
 
-function updateHintStrip(): void {
-  if (!hintOn) {
-    hintStrip.hidden = true;
-    return;
-  }
-  hintStrip.hidden = false;
+function updateHintUI(): void {
+  const active = hintOn || isPlaying;
+  hintStrip.hidden = !active;
+  hintNext.hidden = !active;
+  if (!active) return;
+
   hintStrip.innerHTML = "";
   const windowSize = 8;
   for (let i = 0; i < windowSize; i++) {
-    const token = SHAN_ZHI_CHUAN_XING[(hintIndex + i) % SHAN_ZHI_CHUAN_XING.length];
+    const step = noteSteps[(notePosition + i) % noteSteps.length];
     const span = document.createElement("span");
-    span.textContent = token === 8 ? "1̇" : String(token);
+    span.textContent = step.token === 8 ? "1̇" : String(step.token);
     if (i === 0) span.className = "current";
     hintStrip.appendChild(span);
   }
+
+  const target = noteSteps[notePosition];
+  const octLabel = target.token === 8 ? "（高音）" : "";
+  hintNext.textContent = `下一步：${noteName(target.token === 8 ? 1 : target.token)}${octLabel} · ${notePosition + 1}/${noteSteps.length}`;
 }
 
 function currentHintBellIndex(): number {
-  if (!hintOn) return -1;
-  const token = SHAN_ZHI_CHUAN_XING[hintIndex];
-  return findBellIndex(mainBells, tuneTargetSpec(token));
+  if (!hintOn && !isPlaying) return -1;
+  const target = noteSteps[notePosition];
+  return findBellIndex(mainBells, tuneTargetSpec(target.token));
 }
 
 function advanceHint(struckIndex: number): void {
-  if (!hintOn) return;
+  if (!hintOn && !isPlaying) return;
   if (struckIndex === currentHintBellIndex()) {
-    hintIndex = (hintIndex + 1) % SHAN_ZHI_CHUAN_XING.length;
-    updateHintStrip();
+    notePosition = (notePosition + 1) % noteSteps.length;
+    updateHintUI();
   }
 }
 
 hintToggle.addEventListener("click", () => {
   hintOn = !hintOn;
   hintToggle.setAttribute("aria-pressed", String(hintOn));
-  if (hintOn) hintIndex = 0;
-  updateHintStrip();
+  if (hintOn && !isPlaying) notePosition = 0;
+  updateHintUI();
 });
-updateHintStrip();
+
+function stopPlayback(): void {
+  isPlaying = false;
+  if (playTimer !== null) {
+    window.clearTimeout(playTimer);
+    playTimer = null;
+  }
+  playToggle.textContent = "▶ 播放《山止川行》";
+  playToggle.setAttribute("aria-pressed", "false");
+  if (!hintOn) notePosition = 0;
+  updateHintUI();
+}
+
+function stepPlayback(stepIndex: number): void {
+  if (!isPlaying) return;
+  if (stepIndex >= SHAN_ZHI_CHUAN_XING.length) {
+    stopPlayback();
+    return;
+  }
+  const step = SHAN_ZHI_CHUAN_XING[stepIndex];
+  if (step.kind === "note") {
+    const targetIndex = findBellIndex(mainBells, tuneTargetSpec(step.token));
+    if (targetIndex !== -1) strikeMain(targetIndex, 0.6, 0);
+  }
+  playTimer = window.setTimeout(() => stepPlayback(stepIndex + 1), step.beats * BEAT_MS);
+}
+
+function startPlayback(): void {
+  isPlaying = true;
+  playToggle.textContent = "⏸ 停止播放";
+  playToggle.setAttribute("aria-pressed", "true");
+  notePosition = 0;
+  updateHintUI();
+  stepPlayback(0);
+}
+
+playToggle.addEventListener("click", () => {
+  if (isPlaying) stopPlayback();
+  else startPlayback();
+});
+
+updateHintUI();
 
 function triggerShimmer(deg: number): void {
   const si = SHIMMER_DEGREES.indexOf(deg);
@@ -239,38 +344,32 @@ function activeGlow(map: Map<number, ActiveStrike[]>, index: number, t: number):
 }
 
 function frame(t: number): void {
-  ctx.clearRect(0, 0, width, height);
+  shimmerGroups.forEach((b, i) => {
+    const v = shimmerVisuals[i];
+    b.group.rotation.z = reduceMotion ? 0 : Math.sin(t / 1300 + v.phase) * 0.01;
+    b.material.emissiveIntensity = activeGlow(shimmerActive, i, t) * 1.1;
+  });
 
-  const bg = ctx.createRadialGradient(
-    width * 0.5,
-    height * 0.25,
-    0,
-    width * 0.5,
-    height * 0.25,
-    Math.max(width, height) * 0.7,
-  );
-  bg.addColorStop(0, "#241a10");
-  bg.addColorStop(1, "#120e0a");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, width, height);
-
-  if (mainVisuals.length) drawBeam(ctx, mainVisuals[0].cy, width);
-  if (shimmerVisuals.length) drawBeam(ctx, shimmerVisuals[0].cy, width);
+  mainGroups.forEach((b, i) => {
+    const v = mainVisuals[i];
+    b.group.rotation.z = reduceMotion ? 0 : Math.sin(t / 1400 + v.phase) * 0.012;
+    b.material.emissiveIntensity = activeGlow(mainActive, i, t) * 1.1;
+  });
 
   const hintBellIndex = currentHintBellIndex();
+  const targetVisual = hintBellIndex !== -1 ? mainVisuals[hintBellIndex] : undefined;
+  if (targetVisual) {
+    const pulse = 0.5 + 0.5 * Math.sin(t / 220);
+    const radius = targetVisual.r * (1.35 + 0.25 * pulse);
+    targetRing.visible = true;
+    targetRing.position.set(targetVisual.cx, targetVisual.cy + targetVisual.hang * 0.548, 20);
+    targetRing.scale.set(radius, radius, 1);
+    (targetRing.material as THREE.MeshBasicMaterial).opacity = 0.55 + 0.35 * pulse;
+  } else {
+    targetRing.visible = false;
+  }
 
-  shimmerVisuals.forEach((v, i) => {
-    const sway = reduceMotion ? 0 : Math.sin(t / 1300 + v.phase) * 0.01;
-    drawBell(ctx, v, sway, activeGlow(shimmerActive, i, t));
-  });
-
-  mainVisuals.forEach((v, i) => {
-    const sway = reduceMotion ? 0 : Math.sin(t / 1400 + v.phase) * 0.012;
-    const strikeGlow = activeGlow(mainActive, i, t);
-    const hintGlow = hintBellIndex === i ? 0.5 + 0.3 * Math.sin(t / 260) : 0;
-    drawBell(ctx, v, sway, Math.max(strikeGlow, hintGlow));
-  });
-
+  renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 

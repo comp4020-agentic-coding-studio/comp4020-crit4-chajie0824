@@ -6,7 +6,7 @@
     <title>编钟绕梁</title>
     <meta
       name="description"
-      content="一件可以自由弹奏的编钟乐器：拖动可连奏滑音，力度和敲击位置决定音色，还能开启提示跟着敲完《山止川行》的前奏。"
+      content="一件可以自由弹奏的青铜编钟乐器：拖动可连奏滑音，力度和敲击位置决定音色，一键播放或跟着提示敲完《山止川行》的前奏。"
     />
 
     <meta property="og:type" content="website" />
@@ -36,14 +36,18 @@
         </canvas>
         <div class="readout" id="readout" aria-live="polite"></div>
         <div class="hint-panel">
-          <button type="button" id="hintToggle" aria-pressed="false">🎵 提示：山止川行</button>
+          <div class="hint-buttons">
+            <button type="button" id="playToggle" aria-pressed="false">▶ 播放《山止川行》</button>
+            <button type="button" id="hintToggle" aria-pressed="false">🔔 跟着弹</button>
+          </div>
+          <div class="hint-next" id="hintNext" aria-live="polite" hidden></div>
           <div class="hint-strip" id="hintStrip" hidden></div>
         </div>
       </div>
       <p class="footer-note">
         拖过几口钟能连奏出滑音；敲在钟的正中是「正鼓音」，偏向钟边是「侧鼓音」，两者相差一个小三度——真正的编钟就是这样一钟两音的。
         键盘 <code>A S D F G H J K L ; '</code> 也能弹下方两排钟。上方一排小钟是钮钟，不需要也无法直接敲，它们会在你弹奏时自动跟着高八度轻轻和鸣。
-        点开右下角的提示，可以跟着敲完《山止川行》前奏的旋律走向。
+        点「播放」直接听一遍《山止川行》前奏；点「跟着弹」会用光圈标出下一口该敲的钟，跟着自己弹一遍。
       </p>
     </main>
     <script type="module" src="./main.ts"></script>

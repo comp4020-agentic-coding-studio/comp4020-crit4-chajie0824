@@ -104,7 +104,14 @@ main {
   max-width: min(80vw, 30rem);
 }
 
-#hintToggle {
+.hint-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+#hintToggle,
+#playToggle {
   font-family: "Noto Serif SC", serif;
   font-size: 0.85rem;
   background: rgba(90, 63, 36, 0.55);
@@ -115,28 +122,41 @@ main {
   cursor: pointer;
 }
 
-#hintToggle[aria-pressed="true"] {
+#hintToggle[aria-pressed="true"],
+#playToggle[aria-pressed="true"] {
   background: var(--bronze);
   color: #201509;
   border-color: var(--gold);
 }
 
+.hint-next {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gold);
+  background: rgba(18, 14, 10, 0.65);
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--bronze-dark);
+}
+
 .hint-strip {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.4rem;
   overflow-x: auto;
   background: rgba(18, 14, 10, 0.6);
-  padding: 0.4rem 0.6rem;
+  padding: 0.5rem 0.7rem;
   border-radius: 0.5rem;
   font-family: "JetBrains Mono", monospace;
+  font-size: 1.05rem;
 }
 
 .hint-strip span {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.6em;
-  padding: 0.1em 0.3em;
+  min-width: 1.8em;
+  padding: 0.15em 0.3em;
   border-radius: 0.3em;
   color: var(--ink-muted);
 }
@@ -145,6 +165,7 @@ main {
   color: #201509;
   background: var(--gold);
   font-weight: 700;
+  transform: scale(1.15);
 }
 
 .footer-note {
