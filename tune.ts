@@ -183,10 +183,22 @@ const OU_LE_SONG_RAW = `
 2 1 1 -
 `;
 
-// 兰亭序's cleaner single-line source transcribed fine as jianpu, but wasn't
-// recognizable played back -- most likely because the bracketed section is
-// the wordless instrumental intro, not the sung "兰亭临帖" hook a listener
-// actually knows. Dropped pending a transcription of the vocal melody
-// instead of the intro.
+// 兰亭序's opening vocal hook ("兰亭临帖，行书如行云流水，水月下门，推心
+// 细如你脚步") rather than the wordless instrumental intro tried earlier,
+// which is why that didn't sound recognizable even if the notes were right.
+// Register note: the intro sits a full octave above the score's own written
+// pitch (dotted throughout), but the verse drops back to normal register
+// for singing — only the two "1"s in the last bar actually carry a dot in
+// the source, marked here with "^" rather than shifting baseOct for the
+// whole line.
+const LAN_TING_XU_RAW = `
+0 5 3 5
+6 35 65 32
+3 - 03 23
+1^ 61^ 65 31
+`;
 
-export const SONGS: Song[] = [{ id: "oulesong", name: "欢乐颂", baseOct: 0, steps: parseTune(OU_LE_SONG_RAW) }];
+export const SONGS: Song[] = [
+  { id: "oulesong", name: "欢乐颂", baseOct: 0, steps: parseTune(OU_LE_SONG_RAW) },
+  { id: "lantingxu", name: "兰亭序", baseOct: 0, steps: parseTune(LAN_TING_XU_RAW) },
+];
