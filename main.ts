@@ -4,6 +4,7 @@ import { buildMainBells, findBellIndex, isNoteStep, SHIMMER_DEGREES, SONGS, tune
 import { boundsOf, layoutMain, layoutShimmer, type BellVisual } from "./scene.ts";
 import {
   applyStrikeGlow,
+  bodyHeightFor,
   buildBellGroup,
   createBeam,
   createRenderer,
@@ -370,7 +371,8 @@ function frame(t: number): void {
     const pulse = 0.5 + 0.5 * Math.sin(t / 220);
     const radius = targetVisual.r * (1.35 + 0.25 * pulse);
     targetRing.visible = true;
-    targetRing.position.set(targetVisual.cx, targetVisual.cy + targetVisual.hang * 0.548, 20);
+    const bodyCenterY = targetVisual.cy + targetVisual.hang + bodyHeightFor(targetVisual.r) * 0.5;
+    targetRing.position.set(targetVisual.cx, bodyCenterY, 20);
     targetRing.scale.set(radius, radius, 1);
     (targetRing.material as THREE.MeshBasicMaterial).opacity = 0.55 + 0.35 * pulse;
   } else {
