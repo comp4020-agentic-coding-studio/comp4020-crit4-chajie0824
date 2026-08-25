@@ -13,7 +13,7 @@ cover every deliverable.
 
 ## What I built
 
-Bianzhong: Resounding Bells is a bianzhong (编钟, the ancient Chinese bronze
+Bianzhong: Lingering Bells is a bianzhong (编钟, the ancient Chinese bronze
 bell chime) you play live in the browser --- drag across bells for a
 glissando, strike position shifts pitch between a bell's two real tones
 (正鼓音/侧鼓音), and strike speed sets loudness. The bells are a real
@@ -76,6 +76,23 @@ required to make the instrument work.
    sufficient
    ([`bee0d43`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/bee0d43),
    [`836a6b1`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/836a6b1)).
+
+4. **A "correct" translation was still useless, and only a native speaker's
+   reaction caught it.** Translating the seven scale-degree names to
+   English, I rendered the two less-common ones as plain pinyin ("Qingjiao",
+   "Biangong") on the reasoning that romanization is the standard way to
+   represent a term with no direct English word. The response was that even
+   as a Chinese speaker, "Qingjiao" meant nothing --- the core five degree
+   names are known by their characters (宫商角徵羽), not by pinyin, and the
+   two added for a full seven-tone scale are obscure enough that
+   romanization alone doesn't identify them to anyone, native speaker or
+   not. Correctness of translation and actually being understood turned out
+   to be different bars, and I'd only checked the first. I rewrote every
+   label to show the character, its pinyin, and its closest solfège note
+   together (清角 (Qīngjiǎo) · Fa), and checked it against the same standard
+   that had just failed --- would this actually mean something to the person
+   reading it, not just is it technically right
+   ([`79ddd73`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/79ddd73)).
 
 ## Before you ship
 
