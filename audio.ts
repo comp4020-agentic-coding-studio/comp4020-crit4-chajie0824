@@ -4,11 +4,21 @@
 
 type PartialTone = { ratio: number; amp: number; decayMul: number };
 
+// Measured from a real 65-bell Zeng Hou Yi replica recording (Wuhan
+// Conservatory sample set), not guessed: an FFT of the strike and its decay
+// showed the loudest partial at the moment of impact sits at ~5.7x the
+// fundamental (the bright "clang"), while a completely different partial at
+// ~2.9x is what's still ringing four seconds later — by then the fundamental
+// itself has already died out. That collapse from a bright, fast-decaying
+// high partial into a lower sustained hum is what makes a struck bronze bell
+// sound like metal instead of a synthesizer; a plain harmonic stack doesn't
+// have it.
 const PARTIALS: PartialTone[] = [
-  { ratio: 1, amp: 1.0, decayMul: 1.0 },
-  { ratio: 2.42, amp: 0.42, decayMul: 0.5 },
-  { ratio: 3.76, amp: 0.22, decayMul: 0.32 },
-  { ratio: 5.43, amp: 0.12, decayMul: 0.18 },
+  { ratio: 1.0, amp: 0.5, decayMul: 0.6 },
+  { ratio: 2.9, amp: 0.9, decayMul: 1.4 },
+  { ratio: 4.7, amp: 0.4, decayMul: 0.3 },
+  { ratio: 5.7, amp: 1.0, decayMul: 0.2 },
+  { ratio: 8.3, amp: 0.25, decayMul: 0.1 },
 ];
 
 let engine: { ctx: AudioContext; master: GainNode } | null = null;

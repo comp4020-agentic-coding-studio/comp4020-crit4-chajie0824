@@ -14,7 +14,12 @@ export type Bell3D = {
   material: THREE.MeshStandardMaterial;
 };
 
-const metalShared = new THREE.MeshStandardMaterial({ color: 0x8a6636, metalness: 0.85, roughness: 0.55 });
+// Metalness is deliberately moderate, not near-1: a near-pure metal PBR
+// surface gets almost all of its visible brightness from environment
+// reflection, and this scene has no environment map (skipped deliberately —
+// ancient bronze should read weathered/matte, not mirror-polished). Without
+// one, high metalness just reads as black away from a tiny specular hotspot.
+const metalShared = new THREE.MeshStandardMaterial({ color: 0x8a6636, metalness: 0.5, roughness: 0.5 });
 
 function bellProfile(r: number, hang: number): THREE.Vector2[] {
   const bodyTop = hang * 0.22;
@@ -59,6 +64,46 @@ export function createDetailTexture(): THREE.CanvasTexture {
       c.fill();
     }
   }
+
+  // 铭文: bordered inscription plaques with abstract stroke marks — evokes
+  // a real bell's cast inscription panels without reproducing any specific
+  // real inscription, placed front and back around the revolve.
+  const drawPlaque = (cxFrac: number, cyFrac: number, w: number, h: number) => {
+    const x = cxFrac * size - w / 2;
+    const y = cyFrac * size - h / 2;
+    c.fillStyle = "rgba(30,22,14,0.35)";
+    c.fillRect(x, y, w, h);
+    c.strokeStyle = "rgba(20,14,8,0.5)";
+    c.lineWidth = size * 0.006;
+    c.strokeRect(x, y, w, h);
+
+    const cols = 3;
+    const rows = 4;
+    const padX = w * 0.12;
+    const padY = h * 0.08;
+    const cellW = (w - padX * 2) / cols;
+    const cellH = (h - padY * 2) / rows;
+    let seed = 7;
+    for (let r = 0; r < rows; r++) {
+      for (let col = 0; col < cols; col++) {
+        seed = (seed * 97 + 13) % 1000;
+        if (seed % 5 === 0) continue;
+        const gx = x + padX + col * cellW + cellW * 0.15;
+        const gy = y + padY + r * cellH + cellH * 0.15;
+        const gw = cellW * 0.7;
+        const gh = cellH * 0.7;
+        c.fillStyle = "rgba(255,248,232,0.4)";
+        const strokes = 1 + (seed % 3);
+        for (let s = 0; s < strokes; s++) {
+          const sy = gy + (gh * (s + 0.5)) / strokes;
+          const strokeW = gw * (0.4 + (0.5 * ((seed * (s + 3)) % 10)) / 10);
+          c.fillRect(gx, sy - gh * 0.04, strokeW, gh * 0.08);
+        }
+      }
+    }
+  };
+  drawPlaque(0.28, 0.22, size * 0.22, size * 0.13);
+  drawPlaque(0.72, 0.22, size * 0.22, size * 0.13);
 
   for (let i = 0; i < 1100; i++) {
     const u = (i * 137) % size;
@@ -105,8 +150,8 @@ export function buildBellGroup(v: BellVisual, detailMap: THREE.CanvasTexture): B
   const bodyGeo = new THREE.LatheGeometry(bellProfile(v.r, v.hang), 28);
   const material = new THREE.MeshStandardMaterial({
     color: 0x9c7a42,
-    metalness: 0.82,
-    roughness: 0.48,
+    metalness: 0.5,
+    roughness: 0.42,
     map: detailMap,
     emissive: new THREE.Color(0xe8b463),
     emissiveIntensity: 0,
@@ -146,20 +191,26 @@ export function createRenderer(canvas: HTMLCanvasElement): THREE.WebGLRenderer {
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
   return renderer;
 }
 
 export function createScene(): { scene: THREE.Scene; camera: THREE.OrthographicCamera } {
   const scene = new THREE.Scene();
 
-  scene.add(new THREE.HemisphereLight(0xf3d9a6, 0x120e0a, 1.15));
+  // A flat, direction-independent floor so the bells are never fully black
+  // even from an angle the directional lights don't reach, plus a stronger
+  // hemisphere and key/rim pair for actual shape-revealing shading on top.
+  scene.add(new THREE.AmbientLight(0xfff1d9, 1.3));
+  scene.add(new THREE.HemisphereLight(0xf3d9a6, 0x120e0a, 2.2));
 
-  const key = new THREE.DirectionalLight(0xffdca8, 2.4);
-  key.position.set(0.4, -0.7, 1);
+  const key = new THREE.DirectionalLight(0xffdca8, 4.2);
+  key.position.set(0.5, -0.8, 1.2);
   scene.add(key);
 
-  const rim = new THREE.DirectionalLight(0x8fb0c9, 0.6);
-  rim.position.set(-0.5, 0.3, -0.8);
+  const rim = new THREE.DirectionalLight(0x8fb0c9, 1.6);
+  rim.position.set(-0.6, 0.4, -0.9);
   scene.add(rim);
 
   const camera = new THREE.OrthographicCamera(0, 1, 0, 1, 0.1, 2000);
