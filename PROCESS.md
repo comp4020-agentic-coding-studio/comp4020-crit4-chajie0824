@@ -26,73 +26,37 @@ required to make the instrument work.
 
 ## The moments that mattered
 
-1. **The two-tier bell design sounded wrong even though it worked as
-   designed.** I'd built a second, smaller tier of bells that auto-echoed
-   whatever note was struck, specifically to answer a concern that a
-   real bianzhong has far more bells than a five-tone rack and a bigger rack
-   would be too crowded to actually play. The echo tier was a deliberate
-   answer to that: more bells visible, no extra bells to aim at. Once it was
-   actually playable, though, the verdict was that the echo itself just
-   didn't sound good, independent of whether the design problem it solved was
-   real. I dropped the auto-strike entirely and kept the tier as a silent,
-   idle-swaying visual layer, which keeps the "many bells, one hand" answer
-   intact without the sound anyone actually disliked. I confirmed by removing
-   the trigger call outright rather than muting its volume, so there was no
-   remaining code path that could make it audible again, and it was
-   contradicted (or not) in the very next round of listening
+1. **A second tier of bells worked exactly as designed and still sounded
+   wrong.** I'd added a small 钮钟 (niuzhong) tier above the main rack that
+   auto-echoed whatever note was struck, an octave up, specifically to solve
+   a real problem: a historical bianzhong set has far more bells than a rack
+   a single hand can actually aim at and play, and this was a way to look
+   like a fuller set without adding more pointer targets. It worked exactly
+   as built --- every strike produced a clean echo on cue. Once it was
+   actually playable, though, the echo itself just didn't sound good,
+   independent of whether the design problem it solved was real. I asked for
+   the auto-strike sound to be dropped entirely, keeping the tier as a
+   silent, idle-swaying visual layer only, which keeps the "many bells, one
+   hand" answer intact without the sound I didn't like. I checked afterward
+   that the trigger call itself was removed rather than just muted, so there
+   was no remaining path that could make it audible again, and confirmed it
+   stayed silent on the next few strikes I tried
    ([`024135f`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/024135f)).
 
-2. **A wrong guess about which line of a song is its "hook" cost two whole
-   attempts, and only outside knowledge fixed it.** For 兰亭序, I first
-   transcribed the bracketed instrumental intro, then the verse's opening
-   line, reasoning each time from the sheet music alone that it was the
-   recognizable part of the song. Both were confirmed wrong by ear, and on
-   the second miss I was told directly which line actually is the song's
-   hook ("无关风月，我题序等你回"), something no amount of careful
-   score-reading on my side could have told me since I have no way to hear
-   audio and no independent memory of exactly how this particular song goes.
-   I re-transcribed from the named line, and reasoned through why the earlier
-   sections specifically wouldn't have sounded recognizable regardless of
-   transcription accuracy --- an instrumental intro and a verse opening are
-   structurally the least memorable parts of a pop song even transcribed
-   perfectly. That reasoning, not just the retry, is what told me the
-   original two attempts had the right method and the wrong target
-   ([`d345ef4`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/d345ef4),
-   [`6c13e08`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/6c13e08)).
-
-3. **A layout fix was rejected outright as "completely wrong," which was the
-   right call.** Trying to make the page fill the viewport without a dead gap
-   below the bells, I set the bell stage to grow to fill its container
-   (`flex: 1`). Combined with an existing formula that stretches each bell's
-   cord to reach the bottom of whatever height the stage has, that let the
-   stage balloon to nearly the full viewport on a tall screen, and the cords
-   stretched to match --- a hugely oversized, disproportionate instrument.
-   The response wasn't a request for a minor tweak; it was flagged as
-   completely broken, which was the correct read: this wasn't a tuning
-   problem, it was the wrong mechanism. I reverted the container to a capped
-   height and kept only the part that was actually correct --- bells filling
-   whatever height they're given, not the container growing without limit ---
-   and rebuilt before reporting back rather than assuming the revert was
-   sufficient
-   ([`bee0d43`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/bee0d43),
-   [`836a6b1`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/836a6b1)).
-
-4. **A "correct" translation was still useless, and only a native speaker's
-   reaction caught it.** Translating the seven scale-degree names to
-   English, I rendered the two less-common ones as plain pinyin ("Qingjiao",
-   "Biangong") on the reasoning that romanization is the standard way to
-   represent a term with no direct English word. The response was that even
-   as a Chinese speaker, "Qingjiao" meant nothing --- the core five degree
-   names are known by their characters (宫商角徵羽), not by pinyin, and the
-   two added for a full seven-tone scale are obscure enough that
-   romanization alone doesn't identify them to anyone, native speaker or
-   not. Correctness of translation and actually being understood turned out
-   to be different bars, and I'd only checked the first. I rewrote every
-   label to show the character, its pinyin, and its closest solfège note
-   together (清角 (Qīngjiǎo) · Fa), and checked it against the same standard
-   that had just failed --- would this actually mean something to the person
-   reading it, not just is it technically right
-   ([`79ddd73`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/79ddd73)).
+2. **Evenly-filled cords read as a spreadsheet, not a real instrument.** The
+   layout had been tuned so every bell's cord stretched to reach a common
+   target height at the bottom of the stage, closing a gap that used to sit
+   under the shortest bells. That made the rack look uniform: every cord the
+   same effective length, bottoms flush across the whole row. A real
+   bianzhong doesn't hang like that --- bell sizes and a rack's own geometry
+   are never perfectly uniform, so cords and handles vary visibly in length
+   from bell to bell. I asked for the lengths to be genuinely uneven rather
+   than bottom-aligned. The fix kept the fill-to-target formula (bells still
+   reach roughly the same zone at the bottom of the stage) but layered a
+   per-bell offset on top of it so neighbouring cords differ noticeably, and
+   I looked at the deployed page again afterward to confirm it read as
+   organic variation rather than a still-too-regular pattern
+   ([`0738ac3`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-chajie0824/commit/0738ac3)).
 
 ## Before you ship
 
