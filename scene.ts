@@ -58,12 +58,22 @@ export function layoutShimmer(stage: Stage, count: number): BellVisual[] {
   return out;
 }
 
+// Matches scene3d.ts's BODY_HEIGHT_RATIO (the scanned model's real
+// height/half-width) — kept as a plain number here rather than an import so
+// 2D hit-testing stays independent of the 3D rendering module, per the file
+// header above.
+const BODY_HEIGHT_RATIO = 2.3145;
+
 export function boundsOf(v: BellVisual): { x0: number; x1: number; y0: number; y1: number } {
+  // The body itself is compact (real bianzhong proportions, not the tall
+  // stylized shape this used to be), so the hit region starts partway up
+  // the cord rather than exactly at the body — a natural target size still
+  // matters even though the visual body is shorter now.
   return {
     x0: v.cx - v.r * 1.1,
     x1: v.cx + v.r * 1.1,
-    y0: v.cy + v.hang * 0.15,
-    y1: v.cy + v.hang + v.r * 0.15,
+    y0: v.cy + v.hang * 0.35,
+    y1: v.cy + v.hang + BODY_HEIGHT_RATIO * v.r + v.r * 0.2,
   };
 }
 

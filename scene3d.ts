@@ -1,148 +1,111 @@
-// Real 3D bronze bells: a lens/almond cross-section built by revolving a
-// profile curve with THREE.LatheGeometry (a well-tested primitive, unlike a
-// hand-authored parametric mesh) and then flattening it front-to-back —
-// which gets the vesica-shaped 合瓦 silhouette without hand-rolled geometry
-// math.
+// Real 3D bronze bells. The body is a real 3D-printable bianzhong scan
+// (public/models/bianzhong-body.glb — an open-source STL, decimated and
+// split down to just the ornate lower body; the plain handle above it is
+// still procedural, since a scanned rod would only add file size for
+// something a cylinder already does fine). Everything else (cord, handle,
+// beam) is simple procedural geometry.
 //
-// The shading is unlit and baked into the texture rather than computed from
-// scene lights. Two PBR lighting passes both came out wrong sight-unseen
-// (near-pure-metal with no environment map read as black; the ambient fix
-// for that then washed out all directional shading into a flat, muddy grey)
-// — and there is no way to iterate that blind. A hand-painted highlight
-// gradient across the texture, the same technique the original 2D canvas
-// version used, is fully deterministic: what's painted is exactly what
-// renders, with no light/material interaction left to get wrong.
+// Shading uses MeshMatcapMaterial, not real lights: a matcap only depends on
+// each pixel's view-space normal, so the real bosses/relief on the scanned
+// body actually read as depth — a flat unlit color would hide them entirely,
+// and real lights are what went wrong twice already (near-pure-metal with
+// no environment map read as black; the ambient fix for that then washed
+// out into a flat grey). A matcap is fully deterministic — one authored
+// image, no light/material interaction to get wrong — while still shading
+// by normal direction like a real light would.
 
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { BellVisual } from "./scene.ts";
 
 export type Bell3D = {
   group: THREE.Group;
-  material: THREE.MeshBasicMaterial;
+  material: THREE.MeshMatcapMaterial;
 };
 
 const STRIKE_GLOW = new THREE.Color(0xffd27a);
-const metalShared = new THREE.MeshBasicMaterial({ color: 0x8a6636 });
 
-function bellProfile(r: number, hang: number): THREE.Vector2[] {
-  const bodyTop = hang * 0.22;
-  const bodyH = hang * 0.82;
-  const topW = r * 0.62;
-  const botW = r;
-  return [
-    new THREE.Vector2(Math.max(0.5, topW * 0.94), bodyTop),
-    new THREE.Vector2(topW, bodyTop + bodyH * 0.06),
-    new THREE.Vector2(topW * 1.08, bodyTop + bodyH * 0.22),
-    new THREE.Vector2(botW * 0.94, bodyTop + bodyH * 0.42),
-    new THREE.Vector2(botW, bodyTop + bodyH * 0.6),
-    new THREE.Vector2(botW * 0.86, bodyTop + bodyH * 0.82),
-    new THREE.Vector2(botW * 0.4, bodyTop + bodyH * 0.96),
-    new THREE.Vector2(Math.max(0.4, botW * 0.06), bodyTop + bodyH),
-  ];
-}
-
-export function createDetailTexture(): THREE.CanvasTexture {
+function createMatcapTexture(): THREE.CanvasTexture {
   const size = 256;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const c = canvas.getContext("2d");
-  if (!c) throw new Error("bianzhong: could not create the bronze detail texture");
+  if (!c) throw new Error("bianzhong: could not create the matcap texture");
 
-  // Baked highlight: U wraps around the revolve, so one bright streak with
-  // dark, matching endpoints wraps seamlessly around the bell — this is the
-  // entire "lighting" the bell has, painted once instead of computed live.
-  const highlight = c.createLinearGradient(0, 0, size, 0);
-  highlight.addColorStop(0.0, "#3a2712");
-  highlight.addColorStop(0.2, "#6b4d29");
-  highlight.addColorStop(0.42, "#d9b06c");
-  highlight.addColorStop(0.58, "#a97c3f");
-  highlight.addColorStop(0.8, "#5e4322");
-  highlight.addColorStop(1.0, "#3a2712");
-  c.fillStyle = highlight;
+  const grad = c.createRadialGradient(size * 0.4, size * 0.32, size * 0.03, size * 0.5, size * 0.5, size * 0.5);
+  grad.addColorStop(0, "#f3d9a6");
+  grad.addColorStop(0.22, "#d9b06c");
+  grad.addColorStop(0.5, "#a97c3f");
+  grad.addColorStop(0.78, "#5e4322");
+  grad.addColorStop(1, "#241708");
+  c.fillStyle = grad;
   c.fillRect(0, 0, size, size);
 
-  c.fillStyle = "rgba(35,28,18,0.3)";
-  for (const v of [0.3, 0.335, 0.46, 0.495, 0.62, 0.655]) {
-    c.fillRect(0, v * size, size, size * 0.016);
-  }
-
-  c.fillStyle = "rgba(255,248,232,0.5)";
-  for (const v of [0.38, 0.54]) {
-    const cols = 16;
-    for (let i = 0; i < cols; i++) {
-      const u = (i + 0.5) / cols;
-      c.beginPath();
-      c.ellipse(u * size, v * size, size * 0.016, size * 0.012, 0, 0, Math.PI * 2);
-      c.fill();
-    }
-  }
-
-  // 铭文: bordered inscription plaques with abstract stroke marks — evokes
-  // a real bell's cast inscription panels without reproducing any specific
-  // real inscription, placed front and back around the revolve.
-  const drawPlaque = (cxFrac: number, cyFrac: number, w: number, h: number) => {
-    const x = cxFrac * size - w / 2;
-    const y = cyFrac * size - h / 2;
-    c.fillStyle = "rgba(30,22,14,0.35)";
-    c.fillRect(x, y, w, h);
-    c.strokeStyle = "rgba(20,14,8,0.5)";
-    c.lineWidth = size * 0.006;
-    c.strokeRect(x, y, w, h);
-
-    const cols = 3;
-    const rows = 4;
-    const padX = w * 0.12;
-    const padY = h * 0.08;
-    const cellW = (w - padX * 2) / cols;
-    const cellH = (h - padY * 2) / rows;
-    let seed = 7;
-    for (let r = 0; r < rows; r++) {
-      for (let col = 0; col < cols; col++) {
-        seed = (seed * 97 + 13) % 1000;
-        if (seed % 5 === 0) continue;
-        const gx = x + padX + col * cellW + cellW * 0.15;
-        const gy = y + padY + r * cellH + cellH * 0.15;
-        const gw = cellW * 0.7;
-        const gh = cellH * 0.7;
-        c.fillStyle = "rgba(255,248,232,0.4)";
-        const strokes = 1 + (seed % 3);
-        for (let s = 0; s < strokes; s++) {
-          const sy = gy + (gh * (s + 0.5)) / strokes;
-          const strokeW = gw * (0.4 + (0.5 * ((seed * (s + 3)) % 10)) / 10);
-          c.fillRect(gx, sy - gh * 0.04, strokeW, gh * 0.08);
-        }
-      }
-    }
-  };
-  drawPlaque(0.28, 0.22, size * 0.22, size * 0.13);
-  drawPlaque(0.72, 0.22, size * 0.22, size * 0.13);
-
-  for (let i = 0; i < 1100; i++) {
-    const u = (i * 137) % size;
-    const v = (i * 71) % size;
-    const a = 0.03 + ((i * 13) % 9) / 70;
-    c.fillStyle = `rgba(58,88,76,${a})`;
-    c.beginPath();
-    c.arc(u, v, 1 + ((i * 5) % 3), 0, Math.PI * 2);
-    c.fill();
-  }
-
   const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
 
-export function buildBellGroup(v: BellVisual, detailMap: THREE.CanvasTexture): Bell3D {
+const matcap = createMatcapTexture();
+const metalShared = new THREE.MeshMatcapMaterial({ color: 0x8a6636, matcap });
+
+// The scanned body's own bounding box (measured once from the exported
+// GLB): half-width and height in its native units, used to scale it
+// uniformly to whatever radius a given bell needs.
+const BODY_NATIVE_HALF_WIDTH = 0.5287;
+const BODY_NATIVE_HEIGHT = 1.2237;
+export const BODY_HEIGHT_RATIO = BODY_NATIVE_HEIGHT / BODY_NATIVE_HALF_WIDTH;
+
+export function bodyHeightFor(r: number): number {
+  return BODY_HEIGHT_RATIO * r;
+}
+
+function findFirstMeshGeometry(root: THREE.Object3D): THREE.BufferGeometry | null {
+  let found: THREE.BufferGeometry | null = null;
+  root.traverse((obj) => {
+    if (!found && obj instanceof THREE.Mesh) found = obj.geometry;
+  });
+  return found;
+}
+
+let bodyGeometryPromise: Promise<THREE.BufferGeometry> | null = null;
+
+export function loadBodyGeometry(): Promise<THREE.BufferGeometry> {
+  if (!bodyGeometryPromise) {
+    bodyGeometryPromise = new Promise((resolve, reject) => {
+      new GLTFLoader().load(
+        "./models/bianzhong-body.glb",
+        (gltf) => {
+          const geometry = findFirstMeshGeometry(gltf.scene);
+          if (!geometry) {
+            reject(new Error("bianzhong: model file has no mesh"));
+            return;
+          }
+          // Bake the native model's own axes onto ours: its long axis is Z
+          // (a 3D-print "up"), the neck (where the handle meets the body)
+          // sits at native z=0.89, and it isn't centered in X/depth. After
+          // this, local (0,0,0) is the neck and +y runs down through the
+          // body, matching where every other bell part already expects it.
+          geometry.translate(-0.0438, 0.42, -0.89);
+          geometry.rotateX(Math.PI / 2);
+          resolve(geometry);
+        },
+        undefined,
+        (err) => reject(err instanceof Error ? err : new Error(String(err))),
+      );
+    });
+  }
+  return bodyGeometryPromise;
+}
+
+export function buildBellGroup(v: BellVisual, bodyGeometry: THREE.BufferGeometry): Bell3D {
   const group = new THREE.Group();
   group.position.set(v.cx, v.cy, 0);
 
-  const bodyTop = v.hang * 0.22;
   const cordR = Math.max(0.6, v.r * 0.025);
-  const cord = new THREE.Mesh(new THREE.CylinderGeometry(cordR, cordR, bodyTop, 6), metalShared);
-  cord.position.y = bodyTop / 2;
+  const cord = new THREE.Mesh(new THREE.CylinderGeometry(cordR, cordR, v.hang, 6), metalShared);
+  cord.position.y = v.hang / 2;
   group.add(cord);
 
   if (v.kind === "yong") {
@@ -160,19 +123,20 @@ export function buildBellGroup(v: BellVisual, detailMap: THREE.CanvasTexture): B
     group.add(loop);
   }
 
-  const bodyGeo = new THREE.LatheGeometry(bellProfile(v.r, v.hang), 28);
-  // Base color is white so the texture's baked highlight shows exactly as
-  // painted; a strike blends this toward gold (applyStrikeGlow) and resets
-  // to white each frame, rather than accumulating.
-  const material = new THREE.MeshBasicMaterial({ color: 0xffffff, map: detailMap });
-  const body = new THREE.Mesh(bodyGeo, material);
-  body.scale.z = 0.42;
+  // Base color is white so the matcap shows its natural bronze tone; a
+  // strike blends this toward gold (applyStrikeGlow) and resets to white
+  // each frame, rather than accumulating.
+  const material = new THREE.MeshMatcapMaterial({ color: 0xffffff, matcap });
+  const body = new THREE.Mesh(bodyGeometry, material);
+  body.userData.sharedGeometry = true; // one GLB load, reused across every bell — never dispose it per-bell
+  body.scale.setScalar(v.r / BODY_NATIVE_HALF_WIDTH);
+  body.position.y = v.hang;
   group.add(body);
 
   return { group, material };
 }
 
-export function applyStrikeGlow(material: THREE.MeshBasicMaterial, glow: number): void {
+export function applyStrikeGlow(material: THREE.MeshMatcapMaterial, glow: number): void {
   material.color.setRGB(1, 1, 1).lerp(STRIKE_GLOW, glow * 0.85);
 }
 
@@ -208,9 +172,7 @@ export function createRenderer(canvas: HTMLCanvasElement): THREE.WebGLRenderer {
 }
 
 export function createScene(): { scene: THREE.Scene; camera: THREE.OrthographicCamera } {
-  // No lights: every material here is unlit (MeshBasicMaterial) with its
-  // shading baked into the texture/color directly, so there is nothing for
-  // a light to illuminate.
+  // No lights: matcap and basic materials both shade without them.
   const scene = new THREE.Scene();
 
   const camera = new THREE.OrthographicCamera(0, 1, 0, 1, 0.1, 2000);

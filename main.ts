@@ -6,10 +6,10 @@ import {
   applyStrikeGlow,
   buildBellGroup,
   createBeam,
-  createDetailTexture,
   createRenderer,
   createScene,
   createTargetRing,
+  loadBodyGeometry,
   positionBeam,
   resizeCamera,
   type Bell3D,
@@ -53,7 +53,6 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
 
 const renderer = createRenderer(canvas);
 const { scene, camera } = createScene();
-const detailTexture = createDetailTexture();
 const targetRing = createTargetRing();
 scene.add(targetRing);
 const mainBeam = createBeam();
@@ -68,18 +67,24 @@ let shimmerGroups: Bell3D[] = [];
 let width = 0;
 let height = 0;
 
+// The body mesh's geometry is shared across every bell instance (one GLB
+// load, reused 21 times), so disposing a bell must not dispose it — only
+// the small per-bell parts (cord, handle) actually own their geometry.
+let bodyGeometry: THREE.BufferGeometry | null = null;
+
 function disposeBell(b: Bell3D): void {
   scene.remove(b.group);
   b.group.traverse((obj) => {
-    if (obj instanceof THREE.Mesh) obj.geometry.dispose();
+    if (obj instanceof THREE.Mesh && !obj.userData.sharedGeometry) obj.geometry.dispose();
   });
   b.material.dispose();
 }
 
 function rebuildBells(visuals: BellVisual[], existing: Bell3D[]): Bell3D[] {
+  if (!bodyGeometry) return existing;
   existing.forEach(disposeBell);
   return visuals.map((v) => {
-    const b = buildBellGroup(v, detailTexture);
+    const b = buildBellGroup(v, bodyGeometry as THREE.BufferGeometry);
     scene.add(b.group);
     return b;
   });
@@ -104,6 +109,15 @@ function resize(): void {
 
 new ResizeObserver(resize).observe(stageEl);
 resize();
+
+loadBodyGeometry()
+  .then((geometry) => {
+    bodyGeometry = geometry;
+    resize();
+  })
+  .catch((err: unknown) => {
+    console.error("bianzhong: failed to load the bell model", err);
+  });
 
 type ActiveStrike = { t: number };
 const mainActive = new Map<number, ActiveStrike[]>();
