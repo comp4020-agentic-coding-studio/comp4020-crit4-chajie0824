@@ -13,10 +13,10 @@ cover every deliverable.
 
 ## What I built
 
-Bianzhong: Lingering Bells is a bianzhong (编钟, the ancient Chinese bronze
-bell chime) you play live in the browser --- drag across bells for a
-glissando, strike position shifts pitch between a bell's two real tones
-(正鼓音/侧鼓音), and strike speed sets loudness. The bells are a real
+Bianzhong: Lingering Bells is a bianzhong (the ancient Chinese bronze bell
+chime) you play live in the browser --- drag across bells for a glissando,
+strike position shifts pitch between a bell's two real tones (zhènggǔyīn, the
+center tone, and cègǔyīn, the edge tone), and strike speed sets loudness. The bells are a real
 open-source 3D scan rather than a drawn shape, and every strike plays an
 actual recorded bianzhong sample rather than a synthesized tone, pitch-shifted
 to cover notes the recording set didn't include. A song picker lets a player
@@ -27,7 +27,7 @@ required to make the instrument work.
 ## The moments that mattered
 
 1. **A second tier of bells worked exactly as designed and still sounded
-   wrong.** I'd added a small 钮钟 (niuzhong) tier above the main rack that
+   wrong.** I'd added a small niuzhong tier above the main rack that
    auto-echoed whatever note was struck, an octave up, specifically to solve
    a real problem: a historical bianzhong set has far more bells than a rack
    a single hand can actually aim at and play, and this was a way to look
