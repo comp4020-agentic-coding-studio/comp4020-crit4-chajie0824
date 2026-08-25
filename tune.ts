@@ -91,48 +91,43 @@ export function sampleFor(deg: number, oct: number): SampleRef {
 export const SHIMMER_DEGREES = [1, 2, 3, 5, 6, 7];
 export const SHIMMER_OCT = 3;
 
-// The bracketed instrumental intro of "山止川行" (1=D, 4/4), transcribed
-// beat-group by beat-group exactly as the score groups them: each
-// space-separated group is one beat, split evenly among however many digits
-// share it. "-" holds the previous beat, "0" rests it — both are real time,
-// not skipped, which matters for auto-play timing. A "." after a digit
-// stretches it by one extra held beat. Token 8 is the high tonic reached by
-// the "7 i 7" neighbour-tone figure (a dotted "1" over "7"s in the score).
-const RAW_SCORE = `
-3 5
-5 6 6 676 56
-3 5 5 5 35
-56 6 717 65
-3 - 0 35
-56 6 676 56
-35 5 5 23
-21 6 235
-6 - 0 35
-56 6 676 56
-35 25 3 35
-56 6 717 65
-23. 0 35
-56 06 676 56
-35 25 3 23
-21 6 235
-566 - -
-`;
+// Jianpu scores, transcribed beat-group by beat-group exactly as each score
+// groups them: each space-separated group is one beat, split evenly among
+// however many notes share it. "-" holds the previous beat, "0" rests it —
+// both are real time, not skipped, which matters for auto-play timing. A
+// "." after a digit stretches it by one extra held beat. "^"/"_" immediately
+// after a digit mark it an octave up/down from the song's own middle
+// register (e.g. "71^7" is the "7 i 7" neighbour-tone figure — a dotted "1"
+// over "7"s in the score). Movable-do: degree numbers map onto this
+// instrument's own D-rooted scale regardless of the score's stated key, the
+// same way a capoed guitar plays a song in a different key than written.
 
-export type TuneStep = { kind: "note"; token: number; beats: number } | { kind: "silence"; beats: number };
+export type TuneStep =
+  | { kind: "note"; deg: number; octShift: number; beats: number }
+  | { kind: "silence"; beats: number };
+
+function tokenizeGroup(body: string): Array<{ ch: string; octShift: number }> {
+  const out: Array<{ ch: string; octShift: number }> = [];
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    if (c === "^" || c === "_") continue;
+    const octShift = body[i + 1] === "^" ? 1 : body[i + 1] === "_" ? -1 : 0;
+    out.push({ ch: c, octShift });
+  }
+  return out;
+}
 
 function parseBeatGroup(raw: string): TuneStep[] {
   if (raw === "-" || raw === "0") return [{ kind: "silence", beats: 1 }];
 
   const extraHold = raw.endsWith(".");
   const body = extraHold ? raw.slice(0, -1) : raw;
-  const chars = body.split("");
-  const beats = 1 / chars.length;
+  const tokens = tokenizeGroup(body);
+  const beats = 1 / tokens.length;
 
-  const steps: TuneStep[] = chars.map((c, i) => {
-    if (c === "0") return { kind: "silence", beats };
-    const isHighDo = c === "1" && chars[i - 1] === "7" && chars[i + 1] === "7";
-    return { kind: "note", token: isHighDo ? 8 : Number(c), beats };
-  });
+  const steps: TuneStep[] = tokens.map(({ ch, octShift }) =>
+    ch === "0" ? { kind: "silence", beats } : { kind: "note", deg: Number(ch), octShift, beats },
+  );
   if (extraHold) steps.push({ kind: "silence", beats: 1 });
   return steps;
 }
@@ -145,12 +140,56 @@ function parseTune(raw: string): TuneStep[] {
     .flatMap(parseBeatGroup);
 }
 
-export const SHAN_ZHI_CHUAN_XING: TuneStep[] = parseTune(RAW_SCORE);
-
 export function isNoteStep(step: TuneStep): step is Extract<TuneStep, { kind: "note" }> {
   return step.kind === "note";
 }
 
-export function tuneTargetSpec(token: number): NoteSpec {
-  return token === 8 ? { deg: 1, oct: 1 } : { deg: token, oct: 0 };
+export function tuneTargetSpec(step: Extract<TuneStep, { kind: "note" }>, baseOct: number): NoteSpec {
+  return { deg: step.deg, oct: baseOct + step.octShift };
 }
+
+export type Song = { id: string; name: string; baseOct: number; steps: TuneStep[] };
+
+// The bracketed instrumental intro only, for both songs below — same scope
+// as a hint/demo needs, not a full transcription of every verse.
+const SHAN_ZHI_CHUAN_XING_RAW = `
+3 5
+5 6 6 676 56
+3 5 5 5 35
+56 6 71^7 65
+3 - 0 35
+56 6 676 56
+35 5 5 23
+21 6 235
+6 - 0 35
+56 6 676 56
+35 25 3 35
+56 6 71^7 65
+23. 0 35
+56 06 676 56
+35 25 3 23
+21 6 235
+566 - -
+`;
+
+// 1=bA in the original score; played here on this instrument's own D-rooted
+// scale (movable-do), so it comes out transposed rather than in bA.
+const TIAN_DI_HUAN_HUAN_RAW = `
+32 32 65 65
+32 32 61 2^1
+32 32 7 5
+65 32 6 32
+6^6 32 32
+6^6 32 32
+6 07 32 32
+65 65 3 -
+6^6 3 3
+0 06 76 76
+3 - - -
+76 76 7 -
+`;
+
+export const SONGS: Song[] = [
+  { id: "shanzhichuanxing", name: "山止川行", baseOct: 0, steps: parseTune(SHAN_ZHI_CHUAN_XING_RAW) },
+  { id: "tiandihuanhuan", name: "天地缓缓", baseOct: 0, steps: parseTune(TIAN_DI_HUAN_HUAN_RAW) },
+];

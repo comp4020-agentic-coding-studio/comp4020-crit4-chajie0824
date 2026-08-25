@@ -1,14 +1,6 @@
 import * as THREE from "three";
 import { strike } from "./audio.ts";
-import {
-  buildMainBells,
-  findBellIndex,
-  isNoteStep,
-  SHAN_ZHI_CHUAN_XING,
-  SHIMMER_DEGREES,
-  SHIMMER_OCT,
-  tuneTargetSpec,
-} from "./tune.ts";
+import { buildMainBells, findBellIndex, isNoteStep, SHIMMER_DEGREES, SONGS, tuneTargetSpec } from "./tune.ts";
 import { boundsOf, layoutMain, layoutShimmer, type BellVisual } from "./scene.ts";
 import {
   applyStrikeGlow,
@@ -30,6 +22,7 @@ const hintToggleQuery = document.querySelector<HTMLButtonElement>("#hintToggle")
 const playToggleQuery = document.querySelector<HTMLButtonElement>("#playToggle");
 const hintStripQuery = document.querySelector<HTMLDivElement>("#hintStrip");
 const hintNextQuery = document.querySelector<HTMLDivElement>("#hintNext");
+const songSelectQuery = document.querySelector<HTMLSelectElement>("#songSelect");
 
 if (
   !stageQuery ||
@@ -38,7 +31,8 @@ if (
   !hintToggleQuery ||
   !playToggleQuery ||
   !hintStripQuery ||
-  !hintNextQuery
+  !hintNextQuery ||
+  !songSelectQuery
 ) {
   throw new Error("bianzhong: expected stage markup is missing");
 }
@@ -53,6 +47,7 @@ const hintToggle: HTMLButtonElement = hintToggleQuery;
 const playToggle: HTMLButtonElement = playToggleQuery;
 const hintStrip: HTMLDivElement = hintStripQuery;
 const hintNext: HTMLDivElement = hintNextQuery;
+const songSelect: HTMLSelectElement = songSelectQuery;
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -112,7 +107,6 @@ resize();
 
 type ActiveStrike = { t: number };
 const mainActive = new Map<number, ActiveStrike[]>();
-const shimmerActive = new Map<number, ActiveStrike[]>();
 
 const MAX_SPEED = 1.4; // px/ms, clamps velocity mapping
 const BEAT_MS = 60000 / 92; // ♩=92, as marked on the score
@@ -145,11 +139,16 @@ function noteName(deg: number): string {
 // note sequence: playback is just the machine striking the correct bell for
 // you on a beat clock, which naturally advances the same counter a real
 // strike would.
-const noteSteps = SHAN_ZHI_CHUAN_XING.filter(isNoteStep);
+let currentSong = SONGS[0];
+let noteSteps = currentSong.steps.filter(isNoteStep);
 let notePosition = 0;
 let hintOn = false;
 let isPlaying = false;
 let playTimer: number | null = null;
+
+function octaveDot(octShift: number): string {
+  return octShift > 0 ? "̇" : octShift < 0 ? "̣" : "";
+}
 
 function updateHintUI(): void {
   const active = hintOn || isPlaying;
@@ -162,20 +161,20 @@ function updateHintUI(): void {
   for (let i = 0; i < windowSize; i++) {
     const step = noteSteps[(notePosition + i) % noteSteps.length];
     const span = document.createElement("span");
-    span.textContent = step.token === 8 ? "1̇" : String(step.token);
+    span.textContent = String(step.deg) + octaveDot(step.octShift);
     if (i === 0) span.className = "current";
     hintStrip.appendChild(span);
   }
 
   const target = noteSteps[notePosition];
-  const octLabel = target.token === 8 ? "（高音）" : "";
-  hintNext.textContent = `下一步：${noteName(target.token === 8 ? 1 : target.token)}${octLabel} · ${notePosition + 1}/${noteSteps.length}`;
+  const octMark = target.octShift > 0 ? "（高音）" : target.octShift < 0 ? "（低音）" : "";
+  hintNext.textContent = `下一步：${noteName(target.deg)}${octMark} · ${notePosition + 1}/${noteSteps.length}`;
 }
 
 function currentHintBellIndex(): number {
   if (!hintOn && !isPlaying) return -1;
   const target = noteSteps[notePosition];
-  return findBellIndex(mainBells, tuneTargetSpec(target.token));
+  return findBellIndex(mainBells, tuneTargetSpec(target, currentSong.baseOct));
 }
 
 function advanceHint(struckIndex: number): void {
@@ -199,7 +198,7 @@ function stopPlayback(): void {
     window.clearTimeout(playTimer);
     playTimer = null;
   }
-  playToggle.textContent = "▶ 播放《山止川行》";
+  playToggle.textContent = `▶ 播放《${currentSong.name}》`;
   playToggle.setAttribute("aria-pressed", "false");
   if (!hintOn) notePosition = 0;
   updateHintUI();
@@ -207,13 +206,13 @@ function stopPlayback(): void {
 
 function stepPlayback(stepIndex: number): void {
   if (!isPlaying) return;
-  if (stepIndex >= SHAN_ZHI_CHUAN_XING.length) {
+  if (stepIndex >= currentSong.steps.length) {
     stopPlayback();
     return;
   }
-  const step = SHAN_ZHI_CHUAN_XING[stepIndex];
+  const step = currentSong.steps[stepIndex];
   if (step.kind === "note") {
-    const targetIndex = findBellIndex(mainBells, tuneTargetSpec(step.token));
+    const targetIndex = findBellIndex(mainBells, tuneTargetSpec(step, currentSong.baseOct));
     if (targetIndex !== -1) strikeMain(targetIndex, 0.6, 0);
   }
   playTimer = window.setTimeout(() => stepPlayback(stepIndex + 1), step.beats * BEAT_MS);
@@ -233,21 +232,21 @@ playToggle.addEventListener("click", () => {
   else startPlayback();
 });
 
-updateHintUI();
-
-function triggerShimmer(deg: number): void {
-  const si = SHIMMER_DEGREES.indexOf(deg);
-  if (si === -1) return;
-  const visual = shimmerVisuals[si] as BellVisual | undefined;
-  const pan = visual ? (visual.cx / Math.max(1, width)) * 2 - 1 : 0;
-  const delay = 60 + Math.random() * 90;
-  window.setTimeout(() => {
-    strike({ deg, oct: SHIMMER_OCT, velocity: 0.4, pan, gainScale: 0.35 });
-    const list = shimmerActive.get(si) ?? [];
-    list.push({ t: performance.now() });
-    shimmerActive.set(si, list);
-  }, delay);
+function selectSong(id: string): void {
+  const song = SONGS.find((s) => s.id === id);
+  if (!song) return;
+  stopPlayback();
+  currentSong = song;
+  noteSteps = currentSong.steps.filter(isNoteStep);
+  notePosition = 0;
+  playToggle.textContent = `▶ 播放《${currentSong.name}》`;
+  updateHintUI();
 }
+
+songSelect.addEventListener("change", () => selectSong(songSelect.value));
+
+playToggle.textContent = `▶ 播放《${currentSong.name}》`;
+updateHintUI();
 
 function strikeMain(index: number, velocity: number, blend: number): void {
   const bell = mainBells[index];
@@ -263,7 +262,6 @@ function strikeMain(index: number, velocity: number, blend: number): void {
   const octMark = bell.oct > 0 ? "（高音）" : bell.oct < 0 ? "（低音）" : "";
   readout.textContent = `${noteName(bell.deg)}${octMark} ${suffix} · 力度 ${Math.round(velocity * 100)}%`;
 
-  triggerShimmer(bell.deg);
   advanceHint(index);
 }
 
@@ -344,7 +342,6 @@ function frame(t: number): void {
   shimmerGroups.forEach((b, i) => {
     const v = shimmerVisuals[i];
     b.group.rotation.z = reduceMotion ? 0 : Math.sin(t / 1300 + v.phase) * 0.01;
-    applyStrikeGlow(b.material, activeGlow(shimmerActive, i, t));
   });
 
   mainGroups.forEach((b, i) => {
