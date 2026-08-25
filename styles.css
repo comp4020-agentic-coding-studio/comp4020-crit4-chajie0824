@@ -96,8 +96,8 @@ main {
 .hint-panel {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.6rem;
   padding: 1rem 1.5rem 0;
 }
 
@@ -133,24 +133,27 @@ main {
 
 .hint-next {
   font-family: "JetBrains Mono", monospace;
-  font-size: 0.95rem;
+  font-size: 1.3rem;
   font-weight: 600;
   color: var(--gold);
   background: rgba(18, 14, 10, 0.65);
-  padding: 0.35rem 0.7rem;
-  border-radius: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--bronze-dark);
+  text-align: center;
 }
 
 .hint-strip {
   display: flex;
-  gap: 0.4rem;
+  justify-content: center;
+  gap: 0.5rem;
   overflow-x: auto;
+  max-width: 100%;
   background: rgba(18, 14, 10, 0.6);
-  padding: 0.5rem 0.7rem;
-  border-radius: 0.5rem;
+  padding: 0.7rem 1rem;
+  border-radius: 0.6rem;
   font-family: "JetBrains Mono", monospace;
-  font-size: 1.05rem;
+  font-size: 1.4rem;
 }
 
 .hint-strip span {
@@ -158,8 +161,8 @@ main {
   align-items: center;
   justify-content: center;
   min-width: 1.8em;
-  padding: 0.15em 0.3em;
-  border-radius: 0.3em;
+  padding: 0.2em 0.35em;
+  border-radius: 0.35em;
   color: var(--ink-muted);
 }
 

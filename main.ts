@@ -147,6 +147,14 @@ let lastPointerTime = 0;
 let lastPointerX = 0;
 let lastPointerY = 0;
 
+// Tracked on every hover (button up), independent of drag state, so a fresh
+// click's velocity can come from how fast the pointer was actually moving
+// on approach — like swinging a mallet — instead of a fixed default.
+let hoverX = 0;
+let hoverY = 0;
+let hoverTime = 0;
+let hasHover = false;
+
 function hitTestMain(x: number, y: number): number {
   for (let i = 0; i < mainVisuals.length; i++) {
     const b = boundsOf(mainVisuals[i]);
@@ -321,13 +329,21 @@ function handlePointerActive(x: number, y: number, fresh: boolean): void {
   }
   if (idx === lastStruck && !fresh) return;
 
-  const dt = now - lastPointerTime;
   let velocity = 0.55;
-  if (!fresh && dt > 0 && dt < 90) {
-    const dx = x - lastPointerX;
-    const dy = y - lastPointerY;
-    const speed = Math.hypot(dx, dy) / dt;
-    velocity = Math.min(1, Math.max(0.25, speed / MAX_SPEED));
+  if (fresh) {
+    // Approach speed: how fast the pointer was moving in the hover trail
+    // leading up to this click, not just whether the click itself was fast.
+    const dt = now - hoverTime;
+    if (hasHover && dt > 0 && dt < 150) {
+      const speed = Math.hypot(x - hoverX, y - hoverY) / dt;
+      velocity = Math.min(1, Math.max(0.25, speed / MAX_SPEED));
+    }
+  } else {
+    const dt = now - lastPointerTime;
+    if (dt > 0 && dt < 90) {
+      const speed = Math.hypot(x - lastPointerX, y - lastPointerY) / dt;
+      velocity = Math.min(1, Math.max(0.25, speed / MAX_SPEED));
+    }
   }
   strikeMain(idx, velocity, blendFor(idx, x));
   lastStruck = idx;
@@ -342,8 +358,14 @@ canvas.addEventListener("pointerdown", (ev) => {
   handlePointerActive(x, y, true);
 });
 canvas.addEventListener("pointermove", (ev) => {
-  if (ev.buttons === 0) return;
   const { x, y } = localPoint(ev);
+  if (ev.buttons === 0) {
+    hoverX = x;
+    hoverY = y;
+    hoverTime = performance.now();
+    hasHover = true;
+    return;
+  }
   handlePointerActive(x, y, false);
 });
 canvas.addEventListener("pointerup", () => {
