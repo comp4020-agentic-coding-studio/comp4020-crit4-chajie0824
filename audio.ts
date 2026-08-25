@@ -139,6 +139,26 @@ function synthesizeFallback(
   }
 }
 
+// Each recording is a full ~4s tail, and a repeated note in a real tune can
+// easily retrigger well inside that — "羽" in 天地缓缓 sometimes twice within
+// a second. Left alone, each retrigger stacks another full-length copy of
+// the same recording on top of the still-ringing previous one; a few bars in,
+// several overlapping copies of the identical waveform build into a harsh,
+// ringing buildup that reads as a totally different (and much less
+// pleasant) sound than a single clean strike. A real bell being struck
+// again gets damped by the new strike, not left to ring under it — voice
+// stealing (choking the previous ring when the same note re-fires) mimics
+// that instead of letting them pile up indefinitely.
+const activeVoices = new Map<string, GainNode>();
+
+function chokeVoice(key: string, now: number): void {
+  const prev = activeVoices.get(key);
+  if (!prev) return;
+  prev.gain.cancelScheduledValues(now);
+  prev.gain.setValueAtTime(prev.gain.value, now);
+  prev.gain.linearRampToValueAtTime(0.0001, now + 0.05);
+}
+
 export function strike(opts: StrikeOptions): void {
   const { ctx, master } = ensureAudio();
   const ref = sampleFor(opts.deg, opts.oct);
@@ -146,6 +166,9 @@ export function strike(opts: StrikeOptions): void {
   const gainScale = opts.gainScale ?? 1;
   const now = ctx.currentTime;
   const pitchBend = 1 + blend * (CORNER_RATIO - 1);
+  const voiceKey = `${opts.deg},${opts.oct}`;
+
+  chokeVoice(voiceKey, now);
 
   const panner = ctx.createStereoPanner();
   panner.pan.setValueAtTime(Math.max(-1, Math.min(1, opts.pan)), now);
@@ -156,6 +179,7 @@ export function strike(opts: StrikeOptions): void {
   gain.gain.setValueAtTime(0, now);
   gain.gain.linearRampToValueAtTime(level, now + 0.004);
   gain.connect(panner);
+  activeVoices.set(voiceKey, gain);
 
   const buffer = buffers.get(ref.file);
   if (buffer) {
