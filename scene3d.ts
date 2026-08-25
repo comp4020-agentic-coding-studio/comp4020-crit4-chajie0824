@@ -2,24 +2,27 @@
 // profile curve with THREE.LatheGeometry (a well-tested primitive, unlike a
 // hand-authored parametric mesh) and then flattening it front-to-back —
 // which gets the vesica-shaped 合瓦 silhouette without hand-rolled geometry
-// math. Metalness/roughness plus a baked 篆带/枚/patina detail texture do
-// the material work; no environment-map lighting, since real ancient bronze
-// reads as weathered and matte, not mirror-polished.
+// math.
+//
+// The shading is unlit and baked into the texture rather than computed from
+// scene lights. Two PBR lighting passes both came out wrong sight-unseen
+// (near-pure-metal with no environment map read as black; the ambient fix
+// for that then washed out all directional shading into a flat, muddy grey)
+// — and there is no way to iterate that blind. A hand-painted highlight
+// gradient across the texture, the same technique the original 2D canvas
+// version used, is fully deterministic: what's painted is exactly what
+// renders, with no light/material interaction left to get wrong.
 
 import * as THREE from "three";
 import type { BellVisual } from "./scene.ts";
 
 export type Bell3D = {
   group: THREE.Group;
-  material: THREE.MeshStandardMaterial;
+  material: THREE.MeshBasicMaterial;
 };
 
-// Metalness is deliberately moderate, not near-1: a near-pure metal PBR
-// surface gets almost all of its visible brightness from environment
-// reflection, and this scene has no environment map (skipped deliberately —
-// ancient bronze should read weathered/matte, not mirror-polished). Without
-// one, high metalness just reads as black away from a tiny specular hotspot.
-const metalShared = new THREE.MeshStandardMaterial({ color: 0x8a6636, metalness: 0.5, roughness: 0.5 });
+const STRIKE_GLOW = new THREE.Color(0xffd27a);
+const metalShared = new THREE.MeshBasicMaterial({ color: 0x8a6636 });
 
 function bellProfile(r: number, hang: number): THREE.Vector2[] {
   const bodyTop = hang * 0.22;
@@ -46,7 +49,17 @@ export function createDetailTexture(): THREE.CanvasTexture {
   const c = canvas.getContext("2d");
   if (!c) throw new Error("bianzhong: could not create the bronze detail texture");
 
-  c.fillStyle = "#c7c2b8";
+  // Baked highlight: U wraps around the revolve, so one bright streak with
+  // dark, matching endpoints wraps seamlessly around the bell — this is the
+  // entire "lighting" the bell has, painted once instead of computed live.
+  const highlight = c.createLinearGradient(0, 0, size, 0);
+  highlight.addColorStop(0.0, "#3a2712");
+  highlight.addColorStop(0.2, "#6b4d29");
+  highlight.addColorStop(0.42, "#d9b06c");
+  highlight.addColorStop(0.58, "#a97c3f");
+  highlight.addColorStop(0.8, "#5e4322");
+  highlight.addColorStop(1.0, "#3a2712");
+  c.fillStyle = highlight;
   c.fillRect(0, 0, size, size);
 
   c.fillStyle = "rgba(35,28,18,0.3)";
@@ -148,14 +161,10 @@ export function buildBellGroup(v: BellVisual, detailMap: THREE.CanvasTexture): B
   }
 
   const bodyGeo = new THREE.LatheGeometry(bellProfile(v.r, v.hang), 28);
-  const material = new THREE.MeshStandardMaterial({
-    color: 0x9c7a42,
-    metalness: 0.5,
-    roughness: 0.42,
-    map: detailMap,
-    emissive: new THREE.Color(0xe8b463),
-    emissiveIntensity: 0,
-  });
+  // Base color is white so the texture's baked highlight shows exactly as
+  // painted; a strike blends this toward gold (applyStrikeGlow) and resets
+  // to white each frame, rather than accumulating.
+  const material = new THREE.MeshBasicMaterial({ color: 0xffffff, map: detailMap });
   const body = new THREE.Mesh(bodyGeo, material);
   body.scale.z = 0.42;
   group.add(body);
@@ -163,9 +172,13 @@ export function buildBellGroup(v: BellVisual, detailMap: THREE.CanvasTexture): B
   return { group, material };
 }
 
+export function applyStrikeGlow(material: THREE.MeshBasicMaterial, glow: number): void {
+  material.color.setRGB(1, 1, 1).lerp(STRIKE_GLOW, glow * 0.85);
+}
+
 export function createBeam(): THREE.Mesh {
   const geometry = new THREE.BoxGeometry(4000, 12, 30);
-  const material = new THREE.MeshStandardMaterial({ color: 0x5a3f24, roughness: 0.85, metalness: 0.05 });
+  const material = new THREE.MeshBasicMaterial({ color: 0x5a3f24 });
   return new THREE.Mesh(geometry, material);
 }
 
@@ -191,27 +204,14 @@ export function createRenderer(canvas: HTMLCanvasElement): THREE.WebGLRenderer {
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
   return renderer;
 }
 
 export function createScene(): { scene: THREE.Scene; camera: THREE.OrthographicCamera } {
+  // No lights: every material here is unlit (MeshBasicMaterial) with its
+  // shading baked into the texture/color directly, so there is nothing for
+  // a light to illuminate.
   const scene = new THREE.Scene();
-
-  // A flat, direction-independent floor so the bells are never fully black
-  // even from an angle the directional lights don't reach, plus a stronger
-  // hemisphere and key/rim pair for actual shape-revealing shading on top.
-  scene.add(new THREE.AmbientLight(0xfff1d9, 1.3));
-  scene.add(new THREE.HemisphereLight(0xf3d9a6, 0x120e0a, 2.2));
-
-  const key = new THREE.DirectionalLight(0xffdca8, 4.2);
-  key.position.set(0.5, -0.8, 1.2);
-  scene.add(key);
-
-  const rim = new THREE.DirectionalLight(0x8fb0c9, 1.6);
-  rim.position.set(-0.6, 0.4, -0.9);
-  scene.add(rim);
 
   const camera = new THREE.OrthographicCamera(0, 1, 0, 1, 0.1, 2000);
   camera.position.z = 600;

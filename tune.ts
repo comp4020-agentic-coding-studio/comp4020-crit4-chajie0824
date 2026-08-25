@@ -42,6 +42,48 @@ export function findBellIndex(bells: Bell[], spec: NoteSpec): number {
   return bells.findIndex((b) => b.deg === spec.deg && b.oct === spec.oct);
 }
 
+// Which recorded bianzhong sample plays for each bell, and at what playback
+// rate. Every rate here was computed from the exact target/source
+// frequencies (12-tone equal temperament, A4=440), not estimated — most are
+// 1.0 (a genuine recording of that exact pitch exists); the handful that
+// aren't are semitone-close substitutes for eight notes missing from the
+// sample set, exactly like a sampled instrument stretches a nearby recording
+// across an unsampled key. Files themselves: public/bianzhong/*.mp3, trimmed
+// and re-encoded from the "Bian Zhong" sample library (recorded at Wuhan
+// Conservatory of Music on a 65-bell Zeng Hou Yi replica; free for
+// non-commercial use per its included manual).
+export type SampleRef = { file: string; rate: number };
+
+const SAMPLE_TABLE: Record<string, SampleRef> = {
+  "6,-1": { file: "a2.mp3", rate: 1.122462 }, // B2, from A2 (+2 semitones)
+  "7,-1": { file: "a2.mp3", rate: 1.259921 }, // C#3, from A2 (+4 semitones)
+  "1,0": { file: "g3.mp3", rate: 0.749154 }, // D3, from G3 (-5 semitones)
+  "2,0": { file: "g3.mp3", rate: 0.840896 }, // E3, from G3 (-3 semitones)
+  "3,0": { file: "g3.mp3", rate: 0.943874 }, // F#3, from G3 (-1 semitone)
+  "5,0": { file: "a3.mp3", rate: 1 },
+  "6,0": { file: "b3.mp3", rate: 1 },
+  "7,0": { file: "c4.mp3", rate: 1.059463 }, // C#4, from C4 (+1 semitone)
+  "1,1": { file: "d4.mp3", rate: 1 },
+  "2,1": { file: "e4.mp3", rate: 1 },
+  "3,1": { file: "fs4.mp3", rate: 1 },
+  "5,1": { file: "a4.mp3", rate: 1 },
+  "6,1": { file: "b4.mp3", rate: 1 },
+  "7,1": { file: "cs5.mp3", rate: 1 },
+  "1,2": { file: "d5.mp3", rate: 1 },
+  "1,3": { file: "d6.mp3", rate: 1 },
+  "2,3": { file: "e6.mp3", rate: 1 },
+  "3,3": { file: "fs6.mp3", rate: 1 },
+  "5,3": { file: "a6.mp3", rate: 1 },
+  "6,3": { file: "c7.mp3", rate: 0.943874 }, // B6, from C7 (-1 semitone)
+  "7,3": { file: "d7.mp3", rate: 0.943874 }, // C#7, from D7 (-1 semitone)
+};
+
+export function sampleFor(deg: number, oct: number): SampleRef {
+  const ref = SAMPLE_TABLE[`${deg},${oct}`];
+  if (!ref) throw new Error(`no sample mapped for degree ${deg} octave ${oct}`);
+  return ref;
+}
+
 // The shimmer rack (钮钟 tier): one small bell per scale degree, mounted
 // higher and never struck directly — it echoes whichever degree was just
 // played, up near the top of the ensemble's range, so the rack reads as a

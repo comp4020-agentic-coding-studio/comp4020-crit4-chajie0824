@@ -3,7 +3,6 @@ import { strike } from "./audio.ts";
 import {
   buildMainBells,
   findBellIndex,
-  freqFor,
   isNoteStep,
   SHAN_ZHI_CHUAN_XING,
   SHIMMER_DEGREES,
@@ -12,6 +11,7 @@ import {
 } from "./tune.ts";
 import { boundsOf, layoutMain, layoutShimmer, type BellVisual } from "./scene.ts";
 import {
+  applyStrikeGlow,
   buildBellGroup,
   createBeam,
   createDetailTexture,
@@ -114,7 +114,6 @@ type ActiveStrike = { t: number };
 const mainActive = new Map<number, ActiveStrike[]>();
 const shimmerActive = new Map<number, ActiveStrike[]>();
 
-const CORNER_RATIO = Math.pow(2, 3 / 12); // minor third between 正鼓音 and 侧鼓音
 const MAX_SPEED = 1.4; // px/ms, clamps velocity mapping
 const BEAT_MS = 60000 / 92; // ♩=92, as marked on the score
 
@@ -239,12 +238,11 @@ updateHintUI();
 function triggerShimmer(deg: number): void {
   const si = SHIMMER_DEGREES.indexOf(deg);
   if (si === -1) return;
-  const freq = freqFor(deg, SHIMMER_OCT);
   const visual = shimmerVisuals[si] as BellVisual | undefined;
   const pan = visual ? (visual.cx / Math.max(1, width)) * 2 - 1 : 0;
   const delay = 60 + Math.random() * 90;
   window.setTimeout(() => {
-    strike({ freq, velocity: 0.4, pan, gainScale: 0.35, decayScale: 0.6, pitchIndex: 4, pitchCount: 6 });
+    strike({ deg, oct: SHIMMER_OCT, velocity: 0.4, pan, gainScale: 0.35 });
     const list = shimmerActive.get(si) ?? [];
     list.push({ t: performance.now() });
     shimmerActive.set(si, list);
@@ -254,9 +252,8 @@ function triggerShimmer(deg: number): void {
 function strikeMain(index: number, velocity: number, blend: number): void {
   const bell = mainBells[index];
   const visual = mainVisuals[index];
-  const freq = bell.freq * (1 + blend * (CORNER_RATIO - 1));
   const pan = (visual.cx / Math.max(1, width)) * 2 - 1;
-  strike({ freq, velocity, pan, pitchIndex: index, pitchCount: mainBells.length });
+  strike({ deg: bell.deg, oct: bell.oct, velocity, pan, blend });
 
   const list = mainActive.get(index) ?? [];
   list.push({ t: performance.now() });
@@ -347,13 +344,13 @@ function frame(t: number): void {
   shimmerGroups.forEach((b, i) => {
     const v = shimmerVisuals[i];
     b.group.rotation.z = reduceMotion ? 0 : Math.sin(t / 1300 + v.phase) * 0.01;
-    b.material.emissiveIntensity = activeGlow(shimmerActive, i, t) * 1.1;
+    applyStrikeGlow(b.material, activeGlow(shimmerActive, i, t));
   });
 
   mainGroups.forEach((b, i) => {
     const v = mainVisuals[i];
     b.group.rotation.z = reduceMotion ? 0 : Math.sin(t / 1400 + v.phase) * 0.012;
-    b.material.emissiveIntensity = activeGlow(mainActive, i, t) * 1.1;
+    applyStrikeGlow(b.material, activeGlow(mainActive, i, t));
   });
 
   const hintBellIndex = currentHintBellIndex();
