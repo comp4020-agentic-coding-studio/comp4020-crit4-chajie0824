@@ -183,25 +183,10 @@ const OU_LE_SONG_RAW = `
 2 1 1 -
 `;
 
-// 1=D. A different, much cleaner transcription than the dense two-stave
-// piano score first sent for this song (single melody line + lyrics, same
-// shape as 山止川行/天地缓缓's sources) — the bracketed intro here is
-// legible enough to trust. Every note in it sits one octave above the
-// song's own written register, so that's folded into baseOct=1 instead of
-// marking every single digit with "^".
-const LAN_TING_XU_RAW = `
-0 0 05 61
-2. 1 232
-1 - 11 23
-53 21 65
-3 - 33 56
-3. 2 21 23
-21 11 23
-2. 1 65 23
-1 -
-`;
+// 兰亭序's cleaner single-line source transcribed fine as jianpu, but wasn't
+// recognizable played back -- most likely because the bracketed section is
+// the wordless instrumental intro, not the sung "兰亭临帖" hook a listener
+// actually knows. Dropped pending a transcription of the vocal melody
+// instead of the intro.
 
-export const SONGS: Song[] = [
-  { id: "oulesong", name: "欢乐颂", baseOct: 0, steps: parseTune(OU_LE_SONG_RAW) },
-  { id: "lantingxu", name: "兰亭序", baseOct: 1, steps: parseTune(LAN_TING_XU_RAW) },
-];
+export const SONGS: Song[] = [{ id: "oulesong", name: "欢乐颂", baseOct: 0, steps: parseTune(OU_LE_SONG_RAW) }];
