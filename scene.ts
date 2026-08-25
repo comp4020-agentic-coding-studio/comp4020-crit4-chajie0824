@@ -25,19 +25,18 @@ export type Stage = {
 export function layoutMain(stage: Stage, count: number): BellVisual[] {
   const marginX = stage.width * 0.06;
   const usable = Math.max(1, stage.width - marginX * 2);
-  const bigR = Math.min(stage.height * 0.052, usable / count / 2.1);
+  // The body is now a compact real-proportioned model (not the old tall
+  // stylized shape), so the cord only needs to be a modest multiple of the
+  // bell's own radius rather than stretching to fill the stage's height —
+  // that stretching is what was pushing the whole page past one screen.
+  const bigR = Math.min(stage.height * 0.11, usable / count / 2.1);
   const smallR = bigR * 0.55;
-  // Bells hang from the beam down toward the bottom of the stage, so their
-  // length has to scale with the actual vertical space available, not a
-  // fixed fraction of stage height — otherwise a tall stage leaves the rack
-  // stranded near the top with empty space below it.
-  const baseHang = Math.max(40, (stage.height - stage.mainBeamY) * 0.7);
   const out: BellVisual[] = [];
   for (let i = 0; i < count; i++) {
     const t = count === 1 ? 0 : i / (count - 1);
     const cx = marginX + usable * t;
     const r = bigR + (smallR - bigR) * t;
-    const hang = baseHang * (1 - t * 0.22) + Math.sin(i * 0.85) * baseHang * 0.03;
+    const hang = r * (2.4 - t * 0.3) + Math.sin(i * 0.85) * r * 0.15;
     out.push({ cx, cy: stage.mainBeamY, r, hang, kind: "yong", phase: i * 0.7 });
   }
   return out;
@@ -46,13 +45,12 @@ export function layoutMain(stage: Stage, count: number): BellVisual[] {
 export function layoutShimmer(stage: Stage, count: number): BellVisual[] {
   const marginX = stage.width * 0.16;
   const usable = Math.max(1, stage.width - marginX * 2);
-  const r = Math.max(6, stage.height * 0.02);
-  const baseHang = Math.max(16, (stage.mainBeamY - stage.shimmerBeamY) * 0.45);
+  const r = Math.max(6, stage.height * 0.035);
   const out: BellVisual[] = [];
   for (let i = 0; i < count; i++) {
     const t = count === 1 ? 0.5 : i / (count - 1);
     const cx = marginX + usable * t;
-    const hang = baseHang + Math.sin(i * 1.3) * baseHang * 0.15;
+    const hang = r * 2 + Math.sin(i * 1.3) * r * 0.3;
     out.push({ cx, cy: stage.shimmerBeamY, r, hang, kind: "niu", phase: i * 1.1 });
   }
   return out;

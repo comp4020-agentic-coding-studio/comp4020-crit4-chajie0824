@@ -218,21 +218,8 @@ const OU_LE_SONG_RAW = `
 2 1 1 -
 `;
 
-// 1=D. The bracketed synth-arpeggio intro only — 兰亭序, the other new score
-// sent alongside this one, has no equivalent short bracketed section (it's
-// dense two-stave piano notation throughout, closer to 故宫的记忆 which was
-// dropped for the same reason) and isn't transcribed here.
-const QIAN_QIU_RAW = `
-0 35
-6 - - 6^2^1^
-6 - - 6^6^7^
-1^6^2^1^7 6^7^1^
-3^ - - -
-`;
-
 export const SONGS: Song[] = [
   { id: "shanzhichuanxing", name: "山止川行", baseOct: 0, steps: parseTune(SHAN_ZHI_CHUAN_XING_RAW) },
   { id: "tiandihuanhuan", name: "天地缓缓", baseOct: 0, steps: parseTune(TIAN_DI_HUAN_HUAN_RAW) },
   { id: "oulesong", name: "欢乐颂", baseOct: 0, steps: parseTune(OU_LE_SONG_RAW) },
-  { id: "qianqiu", name: "千秋", baseOct: 0, steps: parseTune(QIAN_QIU_RAW) },
 ];
